@@ -225,15 +225,27 @@ for x in range(5):
         }
 
         // Execute the user student code input block safely
+
         async function executePython() {
             if (!pyodideInstance) return;
-            const code = document.getElementById('python-code').value;
+            document.getElementById('status-text').innerText = "⏳ Reading main.py file contents...";
+    
             try {
+                // Automatically fetches the student's code directly out of main.py
+                const response = await fetch('main.py');
+                const code = await response.text();
+        
+                document.getElementById('status-text').innerText = "🚀 Running main.py script...";
+                document.getElementById('status-text').style.color = "#10b981";
+        
                 await pyodideInstance.runPythonAsync(code);
             } catch (err) {
-                alert("Python Syntax/Runtime Error:\n" + err);
+                document.getElementById('status-text').innerText = "❌ Runtime execution error.";
+                document.getElementById('status-text').style.color = "#ef4444";
+                alert("Python Error:\n" + err);
             }
         }
+
 
         // Hardware Button Listener mapping to trigger runtime events
         function handleBtnPress(btnName) {
