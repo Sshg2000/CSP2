@@ -1,261 +1,190 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Micro:bit Python AI Simulator</title>
-    <!-- Load Pyodide to execute Python natively in the browser -->
-    <script src="https://cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.js"></script>
-    <style>
-        :root {
-            --board-color: #1e1e24;
-            --led-off: #3a1010;
-            --led-on: #ff3333;
-        }
-        body {
-            font-family: system-ui, -apple-system, sans-serif;
-            background: #0f0f12;
-            color: #ffffff;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
-        }
-        h1 { margin-bottom: 5px; font-size: 1.5rem; color: #a1a1aa; }
-        .status { margin-bottom: 20px; font-size: 0.9rem; color: #eab308; }
-        
-        .workspace {
-            display: flex;
-            gap: 40px;
-            align-items: flex-start;
-            justify-content: center;
-            max-width: 1000px;
-            width: 100%;
-        }
-
-        /* Microbit Simulator View */
-        .microbit {
-            width: 340px;
-            height: 280px;
-            background: var(--board-color);
-            border-radius: 24px;
-            position: relative;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
-            border: 4px solid #2d2d34;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            user-select: none;
-            flex-shrink: 0;
-        }
-        .led-grid {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 12px;
-        }
-        .led {
-            width: 16px;
-            height: 16px;
-            background: var(--led-off);
-            border-radius: 3px;
-            transition: background 0.05s, box-shadow 0.05s;
-        }
-        .led.active {
-            background: var(--led-on);
-            box-shadow: 0 0 12px var(--led-on);
-        }
-        .btn {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 40px;
-            height: 40px;
-            background: #3e3e46;
-            border: 3px solid #6b7280;
-            border-radius: 50%;
-            color: white;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            box-shadow: 0 4px 0px #27272a;
-        }
-        .btn-a { left: 20px; }
-        .btn-b { right: 20px; }
-        
-        /* Python Code Input Box for Students */
-        .code-container {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            width: 100%;
-        }
-        textarea {
-            width: 100%;
-            height: 280px;
-            background: #18181b;
-            color: #a7f3d0;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 14px;
-            padding: 15px;
-            border: 1px solid #3f3f46;
-            border-radius: 8px;
-            resize: vertical;
-            box-sizing: border-box;
-        }
-        button.run-btn {
-            background: #10b981;
-            color: black;
-            border: none;
-            padding: 12px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 1rem;
-        }
-        button.run-btn:hover { background: #059669; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Micro:bit AI Classroom</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.js"></script>
 </head>
 <body>
 
-    <h1>Micro:bit Python AI Classroom</h1>
-    <div class="status" id="status-text">🔄 Loading Python Environment Engine...</div>
+<!-- HEADER -->
+<header>
+  <div class="app-title">Micro:bit <span>AI</span> Classroom</div>
 
-    <div class="workspace">
-        <!-- Visual Hardware Microbit -->
-        <div class="microbit">
-            <div class="btn btn-a" onclick="handleBtnPress('A')">A</div>
-            <div class="led-grid" id="grid"></div>
-            <div class="btn btn-b" onclick="handleBtnPress('B')">B</div>
-        </div>
+  <div class="step-tabs">
+    <div class="step-tab active" data-step="0">
+      <div class="num">1</div>
+      <div class="lbl">Hardware</div>
+    </div>
+    <div class="tab-sep"></div>
+    <div class="step-tab" data-step="1">
+      <div class="num">2</div>
+      <div class="lbl">AI Engine</div>
+    </div>
+    <div class="tab-sep"></div>
+    <div class="step-tab" data-step="2">
+      <div class="num">3</div>
+      <div class="lbl">Chatbot</div>
+    </div>
+    <div class="tab-sep"></div>
+    <div class="step-tab" data-step="3">
+      <div class="num">4</div>
+      <div class="lbl">Function Calling</div>
+    </div>
+  </div>
 
-        <!-- Student Assignment Workspace -->
-        <div class="code-container">
-            <label style="font-weight: 600; color: #a1a1aa;">Modify your Python Logic below:</label>
-            <textarea id="python-code"># STUDENT PYTHON WORKSPACE
-import time
-import microbit
+  <div class="ai-badge" id="ai-badge">
+    <div class="ai-dot"></div>
+    <span id="ai-badge-text">AI Loading...</span>
+  </div>
+</header>
 
-print("Initializing Gemma sequence...")
-microbit.clear()
+<!-- STEP BANNER -->
+<div class="step-banner">
+  <div class="step-badge" id="step-badge">STEP 1</div>
+  <div class="step-info">
+    <h2 id="step-title">Hardware Controls</h2>
+    <p id="step-desc">Write Python to control the Micro:bit's 5×5 LED grid and speaker. Use <code>microbit.draw(x, y, on)</code>, <code>microbit.sound(freq, sec)</code>, and <code>microbit.clear()</code>. Press buttons A &amp; B to fire hardware events. Click Run to execute your code live in the browser via Pyodide.</p>
+  </div>
+</div>
 
-# Task 1: Draw a diagonal moving pixel animation across the screen
-for i in range(5):
-    microbit.draw(i, i, True)        # Draw LED at coordinates (x, y)
-    microbit.sound(440 + (i * 80), 0.1) # Sound (frequency, duration)
-    time.sleep(0.15)
-    microbit.draw(i, i, False)       # Turn off LED behind it
+<!-- WORKSPACE -->
+<div class="workspace">
 
-# Task 2: Display custom static pattern using a loop matrix
-# (Students can process elements extracted from model.safetensors here)
-for x in range(5):
-    microbit.draw(x, 2, True) # Lights up the center horizontal row
-</textarea>
-            <button class="run-btn" id="run-button" disabled onclick="executePython()">Waiting for Engine...</button>
-        </div>
+  <!-- LEFT: CODE PANEL -->
+  <div class="code-panel">
+    <div class="panel-bar">
+      <div class="bar-title">
+        <div class="bar-dots"><div class="bar-dot r"></div><div class="bar-dot y"></div><div class="bar-dot g"></div></div>
+        Python Editor
+      </div>
+      <div style="font-size:0.65rem;color:var(--text-dim);" id="editor-hint">Pyodide • runs in browser</div>
     </div>
 
-    <script>
-        let pyodideInstance = null;
-        let audioCtx = null;
-        const leds = [];
-        
-        // Build the 5x5 grid elements
-        const gridContainer = document.getElementById('grid');
-        for (let i = 0; i < 25; i++) {
-            const led = document.createElement('div');
-            led.className = 'led';
-            gridContainer.appendChild(led);
-            leds.push(led);
-        }
+    <textarea id="code-editor" spellcheck="false"></textarea>
 
-        // Web Audio Implementation
-        function playTone(freq, durationSec) {
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = 'triangle';
-            osc.frequency.value = freq;
-            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + durationSec);
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.start();
-            osc.stop(audioCtx.currentTime + durationSec);
-        }
+    <div class="console-strip" id="console-strip"></div>
 
-        // JavaScript Hardware Engine API (Bridged to Python)
-        const hardwareAPI = {
-            draw: function(x, y, state) {
-                if (x < 0 || x > 4 || y < 0 || y > 4) return;
-                const idx = y * 5 + x;
-                if (state) leds[idx].classList.add('active');
-                else leds[idx].classList.remove('active');
-            },
-            sound: function(frequency, durationSec) {
-                playTone(frequency, durationSec);
-            },
-            clear: function() {
-                leds.forEach(l => l.className = 'led');
-            }
-        };
+    <div class="code-footer">
+      <button class="btn-run" id="btn-run" disabled>⏳ Loading…</button>
+      <div class="run-status" id="run-status">Initialising Python engine…</div>
+    </div>
+  </div>
 
-        // Initialize Pyodide Runtime environment
-        async function initPythonWorkspace() {
-            try {
-                pyodideInstance = await loadPyodide();
-                
-                // Inject the custom local mock module "microbit" directly into the student's python workspace
-                pyodideInstance.registerJsModule("microbit", hardwareAPI);
-                
-                document.getElementById('status-text').innerText = "✅ Python Engine Active. Loaded model.safetensors reference context.";
-                document.getElementById('status-text').style.color = "#10b981";
-                const runBtn = document.getElementById('run-button');
-                runBtn.disabled = false;
-                runBtn.innerText = "Run Python Script";
-            } catch (err) {
-                document.getElementById('status-text').innerText = "❌ Error initializing Python Engine.";
-                console.error(err);
-            }
-        }
+  <!-- RIGHT: OUTPUT PANEL -->
+  <div class="out-panel">
 
-        // Execute the user student code input block safely
+    <!-- VIEW 1: HARDWARE SIMULATOR -->
+    <div class="view active" id="view-hw">
+      <div class="microbit" id="microbit-main">
+        <div class="mb-btn mb-btn-a" id="hw-btn-a">A</div>
+        <div class="led-grid" id="led-grid-main"></div>
+        <div class="mb-btn mb-btn-b" id="hw-btn-b">B</div>
+      </div>
+      <div class="hw-presets">
+        <button class="preset-btn" onclick="loadPreset('smiley')">😊 Smiley</button>
+        <button class="preset-btn" onclick="loadPreset('heart')">❤️ Heart</button>
+        <button class="preset-btn" onclick="loadPreset('x')">✕ Clear</button>
+        <button class="preset-btn" onclick="loadPreset('checker')">▦ Checker</button>
+        <button class="preset-btn" onclick="loadPreset('arrow')">➤ Arrow</button>
+      </div>
+    </div>
 
-        async function executePython() {
-            if (!pyodideInstance) return;
-            document.getElementById('status-text').innerText = "⏳ Reading main.py file contents...";
-    
-            try {
-                // Automatically fetches the student's code directly out of main.py
-                const response = await fetch('main.py');
-                const code = await response.text();
-        
-                document.getElementById('status-text').innerText = "🚀 Running main.py script...";
-                document.getElementById('status-text').style.color = "#10b981";
-        
-                await pyodideInstance.runPythonAsync(code);
-            } catch (err) {
-                document.getElementById('status-text').innerText = "❌ Runtime execution error.";
-                document.getElementById('status-text').style.color = "#ef4444";
-                alert("Python Error:\n" + err);
-            }
-        }
+    <!-- VIEW 2: AI CONFIG -->
+    <div class="view" id="view-config">
+      <div class="cfg-section">
+        <div class="cfg-title">Model Status</div>
+        <div class="model-status" id="model-status-box">
+          <div class="ms-icon">⏳</div>
+          <div class="ms-body">
+            <strong id="ms-title">Loading Gemma model…</strong>
+            <span id="ms-sub">PyTorch is initialising the local model files. This may take 30–60 seconds.</span>
+          </div>
+        </div>
+      </div>
 
+      <div class="cfg-section">
+        <div class="cfg-title">Inference Hyperparameters</div>
+        <div class="cfg-row">
+          <div class="cfg-lbl">Temperature</div>
+          <input type="range" id="cfg-temp" min="0.1" max="1.5" step="0.05" value="0.7">
+          <div class="cfg-val" id="cfg-temp-val">0.70</div>
+        </div>
+        <div class="cfg-row">
+          <div class="cfg-lbl">Max New Tokens</div>
+          <input type="number" id="cfg-tokens" min="10" max="500" value="200">
+        </div>
+      </div>
 
-        // Hardware Button Listener mapping to trigger runtime events
-        function handleBtnPress(btnName) {
-            playTone(600, 0.05);
-            // Alert Python environment context of action if needed
-            document.getElementById('status-text').innerText = `Hardware Trigger: Button ${btnName} Pressed.`;
-        }
+      <div class="cfg-section">
+        <div class="cfg-title">System Prompt</div>
+        <textarea class="cfg-textarea" id="cfg-prompt">You are a helpful AI classroom assistant. Be concise and friendly.</textarea>
+      </div>
 
-        // Start initialization on page load
-        initPythonWorkspace();
-    </script>
+      <div class="cfg-section" style="border-color:var(--indigo)">
+        <div class="cfg-title">Apply Configuration</div>
+        <div style="font-size:0.73rem;color:var(--text-dim);margin-bottom:8px;">
+          Sends your settings to the PyTorch backend running the Gemma model. Changes take effect on the next API call.
+        </div>
+        <button class="btn-apply" id="btn-apply-cfg">Apply Settings →</button>
+        <div class="run-status" id="cfg-status" style="margin-top:6px;"></div>
+      </div>
+    </div>
+
+    <!-- VIEW 3: CHAT TERMINAL -->
+    <div class="view" id="view-chat">
+      <div class="chat-messages" id="chat-messages">
+        <div class="chat-msg ai">
+          <div class="msg-av">AI</div>
+          <div class="msg-bubble">Welcome to Step 3! I'm powered by the local Gemma model. Ask me anything — try "What is PyTorch?" or "Explain temperature in AI models."</div>
+        </div>
+      </div>
+      <div class="chat-input-bar">
+        <textarea class="chat-input" id="chat-input-3" placeholder="Type a message… (Enter to send)" rows="1"></textarea>
+        <button class="btn-send" id="chat-send-3">➤</button>
+      </div>
+    </div>
+
+    <!-- VIEW 4: FUNCTION CALLING -->
+    <div class="view" id="view-route">
+      <div class="route-hw">
+        <div class="microbit small" id="microbit-route">
+          <div class="mb-btn mb-btn-a">A</div>
+          <div class="led-grid" id="led-grid-route"></div>
+          <div class="mb-btn mb-btn-b">B</div>
+        </div>
+        <div class="route-info">
+          <span>AI router active</span>
+          <span class="route-tag ai" id="route-method-tag" style="display:none">AI</span>
+          <span id="route-pattern-label" style="font-size:0.69rem;color:var(--text-dim);">Type below to trigger hardware →</span>
+        </div>
+      </div>
+      <div class="route-chat">
+        <div class="chat-messages" id="route-messages">
+          <div class="chat-msg ai">
+            <div class="msg-av">AI</div>
+            <div class="msg-bubble">I'm the invisible router. Type a natural statement and I'll figure out what to display on the Micro:bit. Try: <em>"I'm hungry"</em>, <em>"play some music"</em>, or <em>"I'm so happy!"</em></div>
+          </div>
+        </div>
+        <div class="chat-input-bar">
+          <textarea class="chat-input" id="chat-input-4" placeholder="e.g. I'm hungry… play music… I feel great! (Enter to send)" rows="1"></textarea>
+          <button class="btn-send" id="chat-send-4">➤</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /out-panel -->
+</div><!-- /workspace -->
+
+<!-- NAV BAR -->
+<div class="nav-bar">
+  <button class="btn-nav" id="btn-prev" disabled>← Back</button>
+  <div class="nav-label"><strong id="nav-step-name">Step 1</strong> of 4</div>
+  <button class="btn-nav fwd" id="btn-next">Next →</button>
+</div>
+
+<script src="script.js"></script>
 </body>
 </html>
