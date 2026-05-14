@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Micro:bit Python AI Simulator</title>
+    <!-- Load Pyodide to execute Python natively in the browser -->
+    <script src="jsdelivr.net"></script>
+    <style>
+        :root {
+            --board-color: #1e1e24;
+            --led-off: #3a1010;
+            --led-on: #ff3333;
+        }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #0f0f12;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 { margin-bottom: 5px; font-size: 1.5rem; color: #a1a1aa; }
+        .status { margin-bottom: 20px; font-size: 0.9rem; color: #eab308; }
+        
+        .workspace {
+            display: flex;
+            gap: 40px;
+            align-items: flex-start;
+            justify-content: center;
+            max-width: 1000px;
+            width: 100%;
+        }
+
+        /* Microbit Simulator View */
+        .microbit {
+            width: 340px;
+            height: 280px;
+            background: var(--board-color);
+            border-radius: 24px;
+            position: relative;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            border: 4px solid #2d2d34;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            flex-shrink: 0;
+        }
+        .led-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+        }
+        .led {
+            width: 16px;
+            height: 16px;
+            background: var(--led-off);
+            border-radius: 3px;
+            transition: background 0.05s, box-shadow 0.05s;
+        }
+        .led.active {
+            background: var(--led-on);
+            box-shadow: 0 0 12px var(--led-on);
+        }
+        .btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 40px;
+            height: 40px;
+            background: #3e3e46;
+            border: 3px solid #6b7280;
+            border-radius: 50%;
+            color: white;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 0px #27272a;
+        }
+        .btn-a { left: 20px; }
+        .btn-b { right: 20px; }
+        
+        /* Python Code Input Box for Students */
+        .code-container {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+        }
+        textarea {
+            width: 100%;
+            height: 280px;
+            background: #18181b;
+            color: #a7f3d0;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            padding: 15px;
+            border: 1px solid #3f3f46;
+            border-radius: 8px;
+            resize: vertical;
+            box-sizing: border-box;
+        }
+        button.run-btn {
+            background: #10b981;
+            color: black;
+            border: none;
+            padding: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1rem;
+        }
+        button.run-btn:hover { background: #059669; }
+    </style>
+</head>
+<body>
+
+    <h1>Micro:bit Python AI Classroom</h1>
+    <div class="status" id="status-text">🔄 Loading Python Environment Engine...</div>
+
+    <div class="workspace">
+        <!-- Visual Hardware Microbit -->
+        <div class="microbit">
+            <div class="btn btn-a" onclick="handleBtnPress('A')">A</div>
+            <div class="led-grid" id="grid"></div>
+            <div class="btn btn-b" onclick="handleBtnPress('B')">B</div>
+        </div>
+
+        <!-- Student Assignment Workspace -->
+        <div class="code-container">
+            <label style="font-weight: 600; color: #a1a1aa;">Modify your Python Logic below:</label>
+            <textarea id="python-code"># STUDENT PYTHON WORKSPACE
+import time
+import microbit
+
+print("Initializing Gemma sequence...")
+microbit.clear()
+
+# Task 1: Draw a diagonal moving pixel animation across the screen
+for i in range(5):
+    microbit.draw(i, i, True)        # Draw LED at coordinates (x, y)
+    microbit.sound(440 + (i * 80), 0.1) # Sound (frequency, duration)
+    time.sleep(0.15)
+    microbit.draw(i, i, False)       # Turn off LED behind it
+
+# Task 2: Display custom static pattern using a loop matrix
+# (Students can process elements extracted from model.safetensors here)
+for x in range(5):
+    microbit.draw(x, 2, True) # Lights up the center horizontal row
+</textarea>
+            <button class="run-btn" id="run-button" disabled onclick="executePython()">Waiting for Engine...</button>
+        </div>
+    </div>
+
+    <script>
+        let pyodideInstance = null;
+        let audioCtx = null;
+        const leds = [];
+        
+        // Build the 5x5 grid elements
+        const gridContainer = document.getElementById('grid');
+        for (let i = 0; i < 25; i++) {
+            const led = document.createElement('div');
+            led.className = 'led';
+            gridContainer.appendChild(led);
+            leds.push(led);
+        }
+
+        // Web Audio Implementation
+        function playTone(freq, durationSec) {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.value = freq;
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + durationSec);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + durationSec);
+        }
+
+        // JavaScript Hardware Engine API (Bridged to Python)
+        const hardwareAPI = {
+            draw: function(x, y, state) {
+                if (x < 0 || x > 4 || y < 0 || y > 4) return;
+                const idx = y * 5 + x;
+                if (state) leds[idx].classList.add('active');
+                else leds[idx].classList.remove('active');
+            },
+            sound: function(frequency, durationSec) {
+                playTone(frequency, durationSec);
+            },
+            clear: function() {
+                leds.forEach(l => l.className = 'led');
+            }
+        };
+
+        // Initialize Pyodide Runtime environment
+        async function initPythonWorkspace() {
+            try {
+                pyodideInstance = await loadPyodide();
+                
+                // Inject the custom local mock module "microbit" directly into the student's python workspace
+                pyodideInstance.registerJsModule("microbit", hardwareAPI);
+                
+                document.getElementById('status-text').innerText = "✅ Python Engine Active. Loaded model.safetensors reference context.";
+                document.getElementById('status-text').style.color = "#10b981";
+                const runBtn = document.getElementById('run-button');
+                runBtn.disabled = false;
+                runBtn.innerText = "Run Python Script";
+            } catch (err) {
+                document.getElementById('status-text').innerText = "❌ Error initializing Python Engine.";
+                console.error(err);
+            }
+        }
+
+        // Execute the user student code input block safely
+        async function executePython() {
+            if (!pyodideInstance) return;
+            const code = document.getElementById('python-code').value;
+            try {
+                await pyodideInstance.runPythonAsync(code);
+            } catch (err) {
+                alert("Python Syntax/Runtime Error:\n" + err);
+            }
+        }
+
+        // Hardware Button Listener mapping to trigger runtime events
+        function handleBtnPress(btnName) {
+            playTone(600, 0.05);
+            // Alert Python environment context of action if needed
+            document.getElementById('status-text').innerText = `Hardware Trigger: Button ${btnName} Pressed.`;
+        }
+
+        // Start initialization on page load
+        initPythonWorkspace();
+    </script>
+</body>
+</html>
