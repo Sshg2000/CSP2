@@ -145,10 +145,17 @@
 
     <!-- VIEW 3: CHAT TERMINAL -->
     <div class="view" id="view-chat">
+      <!-- Live config strip — pulls from Step 2 settings -->
+      <div class="cfg-strip" id="cfg-strip-3">
+        <span class="cfg-strip-label">Step 2 config active:</span>
+        <span class="cfg-strip-chip" id="cs3-temp">temp —</span>
+        <span class="cfg-strip-chip" id="cs3-tokens">tokens —</span>
+        <span class="cfg-strip-prompt" id="cs3-prompt">system prompt not set — run Step 2 first</span>
+      </div>
       <div class="chat-messages" id="chat-messages">
         <div class="chat-msg ai">
           <div class="msg-av">AI</div>
-          <div class="msg-bubble">Welcome to Step 3! I'm powered by the local Gemma model. Complete the code on the left, then type here to chat.</div>
+          <div class="msg-bubble">Welcome to Step 3! I'm powered by the local Gemma model using your Step 2 configuration. Complete the code on the left, then type here to chat.</div>
         </div>
       </div>
       <div class="chat-input-bar">
@@ -159,6 +166,13 @@
 
     <!-- VIEW 4: FUNCTION CALLING -->
     <div class="view" id="view-route">
+      <!-- Live config strip — same settings as Steps 2 & 3 -->
+      <div class="cfg-strip" id="cfg-strip-4">
+        <span class="cfg-strip-label">Step 2 config active:</span>
+        <span class="cfg-strip-chip" id="cs4-temp">temp —</span>
+        <span class="cfg-strip-chip" id="cs4-tokens">tokens —</span>
+        <span class="cfg-strip-prompt" id="cs4-prompt">system prompt not set — run Step 2 first</span>
+      </div>
       <div class="route-hw">
         <div class="microbit small" id="microbit-route">
           <div class="mb-btn mb-btn-a">A</div>
