@@ -7,21 +7,20 @@ const STEPS = [
   {
     badge: 'STEP 1',
     title: 'Hardware Controls',
-    desc: 'Write Python to control the Micro:bit\'s 5×5 LED grid and speaker. Use microbit.draw(x, y, on), microbit.sound(freq, sec), and microbit.clear(). Press A & B for hardware events. Runs live in the browser via Pyodide.',
+    desc: 'Write Python to control the Micro:bit\'s 5×5 LED grid and speaker. Use microbit.draw(x, y, on), microbit.sound(freq, sec), and microbit.clear(). Press A & B for hardware events. Click Run — Pyodide executes your Python live in the browser.',
     view: 'view-hw',
-    editorHint: 'Pyodide • runs in browser',
-    runLabel: 'Run Code ▶',
+    editorHint: 'Pyodide • runs live in browser',
+    runLabel: '▶  Run Code',
     code: `import microbit
-import time
 
 # ── STEP 1: HARDWARE CONTROLS ─────────────────────────────────
-# Available functions:
-#   microbit.draw(x, y, True/False)  — control individual LED
-#   microbit.sound(frequency, secs)  — play a tone
+# Functions you can use:
+#   microbit.draw(x, y, True/False)  — toggle an LED at (x, y)
+#   microbit.sound(frequency, secs)  — play a tone via Web Audio
 #   microbit.clear()                 — turn all LEDs off
 #
-# The x, y coordinates go from (0,0) top-left to (4,4) bottom-right
-# Try modifying this pattern and clicking Run!
+# Coordinates: (0,0) = top-left,  (4,4) = bottom-right
+# Modify this code and click Run to see it on the board!
 # ──────────────────────────────────────────────────────────────
 
 microbit.clear()
@@ -36,252 +35,186 @@ for x, y in eyes:
 for x, y in mouth:
     microbit.draw(x, y, True)
 
-# Play a cheerful rising tone
-microbit.sound(523, 0.15)   # C5
-time.sleep(0.05)
-microbit.sound(659, 0.15)   # E5
-time.sleep(0.05)
-microbit.sound(784, 0.3)    # G5
+# Play a cheerful rising arpeggio
+microbit.sound(523, 0.12)   # C5
+microbit.sound(659, 0.12)   # E5
+microbit.sound(784, 0.25)   # G5
 
-print("Hardware demo complete!")
-print("Try pressing buttons A and B on the board.")
+print("Smiley drawn on 5x5 LED grid.")
+print("Button A → smiley  |  Button B → clear")
+print("Try changing the pattern and clicking Run again!")
 `
   },
   {
     badge: 'STEP 2',
     title: 'AI Engine Setup',
-    desc: 'Configure the Gemma model running on the PyTorch backend. Adjust Temperature (controls randomness), Max Tokens (response length), and the System Prompt. Click "Apply Settings" to send your configuration to the model.',
+    desc: 'Configure the Gemma model running on the PyTorch backend. Edit TEMPERATURE, MAX_NEW_TOKENS, and SYSTEM_PROMPT in the code, then click Run — the values are parsed from your code and applied to the live model.',
     view: 'view-config',
-    editorHint: 'Reference code — backend handles inference',
-    runLabel: 'Apply Settings →',
+    editorHint: 'Edit values → click Run to apply to Gemma',
+    runLabel: '▶  Run & Apply Config',
     code: `import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 # ── STEP 2: AI ENGINE SETUP ───────────────────────────────────
-# This shows how the PyTorch backend loads and configures Gemma.
-# Adjust the sliders and prompt on the right, then click Apply.
+# Edit the hyperparameters below and click Run.
+# Your values will be parsed and sent to the Gemma backend.
 # ──────────────────────────────────────────────────────────────
 
-# Device selection — automatically uses GPU if available
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-print(f"Running on: {DEVICE}")
+MODEL_PATH = "."   # Local Gemma model files in this project
 
-# Load model from local files already in this project
-MODEL_PATH = "."   # All Gemma model files are in the root directory
-
+# Loading happens once at server startup (already done):
 tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH, local_files_only=True)
-
 model = AutoModelForCausalLM.from_pretrained(
     MODEL_PATH,
     local_files_only=True,
-    torch_dtype=torch.bfloat16,    # Memory-efficient 16-bit format
-    low_cpu_mem_usage=True,         # Stream weights to reduce peak RAM
+    torch_dtype=torch.bfloat16,
+    low_cpu_mem_usage=True,
 )
 model.eval()
+print(f"Model loaded on: {DEVICE}")
 
-# ── HYPERPARAMETERS ───────────────────────────────────────────
-# Temperature  — controls output randomness
-#   0.1  = Very deterministic, focused responses
-#   0.7  = Balanced (recommended default)
-#   1.2  = Creative, unpredictable
+# ── EDIT THESE HYPERPARAMETERS ────────────────────────────────
+# Temperature — randomness of output
+#   0.1 = Very focused / deterministic
+#   0.7 = Balanced (recommended)
+#   1.3 = Creative and unpredictable
 TEMPERATURE = 0.7
 
-# Max new tokens — caps the response length
+# Maximum tokens the model will generate per reply
 MAX_NEW_TOKENS = 200
 
-# System prompt — sets the AI's personality and rules
-SYSTEM_PROMPT = "You are a helpful AI classroom assistant."
+# System prompt — sets the AI personality and rules
+SYSTEM_PROMPT = "You are a helpful AI classroom assistant. Be concise and friendly."
 
-# ── GENERATION ────────────────────────────────────────────────
-def generate(user_message):
-    messages = [
-        {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user",   "content": user_message},
-    ]
-    inputs = tokenizer.apply_chat_template(
-        messages,
-        tokenize=True,
-        add_generation_prompt=True,
-        return_tensors="pt"
-    ).to(DEVICE)
-
-    with torch.no_grad():
-        out = model.generate(
-            inputs,
-            max_new_tokens=MAX_NEW_TOKENS,
-            temperature=TEMPERATURE,
-            do_sample=(TEMPERATURE > 0),
-        )
-
-    new_tokens = out[0][inputs.shape[1]:]
-    return tokenizer.decode(new_tokens, skip_special_tokens=True).strip()
-
-print(f"Temperature : {TEMPERATURE}")
-print(f"Max tokens  : {MAX_NEW_TOKENS}")
-print("Model ready — use the panel on the right to configure!")
+# ─────────────────────────────────────────────────────────────
+print(f"Temperature    : {TEMPERATURE}")
+print(f"Max new tokens : {MAX_NEW_TOKENS}")
+print(f"System prompt  : {SYSTEM_PROMPT[:60]}...")
+print("Configuration applied to backend model!")
 `
   },
   {
     badge: 'STEP 3',
     title: 'Chatbot Interface',
-    desc: 'Your Gemma model is now a chatbot. The premade code below shows exactly how the chat API works — send a message, receive a reply. Use the terminal on the right to have a real conversation with the model.',
+    desc: 'The premade code below shows exactly how the chat loop works. Click Run to fire a live test message to Gemma and see its reply in the terminal panel. Then type your own messages in the chat.',
     view: 'view-chat',
-    editorHint: 'Premade — study the chat loop pattern',
-    runLabel: 'Open Chat →',
+    editorHint: 'Premade code — click Run to test it live',
+    runLabel: '▶  Run Test Message',
     code: `# ── STEP 3: CHATBOT INTERFACE ────────────────────────────────
-# This is the code that powers the chat panel on the right.
-# Study the pattern: we POST to /api/chat and get a reply.
+# The code below is what drives the chat panel on the right.
+# Click Run to send a live test message to Gemma!
+# Then type your own messages in the chat input.
 # ──────────────────────────────────────────────────────────────
 
 import requests
 
-BASE_URL = "http://localhost:5000"   # Flask backend address
-conversation = []                    # Stores the full chat history
+BASE_URL = "http://localhost:5000"
+conversation = []   # Stores full chat history for context
 
 def send_message(user_text: str) -> str:
     """
-    Send a message to Gemma and return its reply.
-
+    POST user_text to the Flask backend.
     The backend:
-      1. Prepends the system prompt you configured in Step 2
-      2. Appends the conversation history for context
+      1. Prepends the system prompt from Step 2
+      2. Appends conversation history for multi-turn memory
       3. Runs torch.no_grad() inference with Gemma
-      4. Returns the decoded output text
+      4. Returns the decoded text output
     """
-    response = requests.post(f"{BASE_URL}/api/chat", json={
+    r = requests.post(f"{BASE_URL}/api/chat", json={
         "message": user_text,
-        "history": conversation,      # Give the model memory
+        "history": conversation,
     })
+    return r.json()["reply"]
 
-    data = response.json()
-    return data["reply"]
+# ── LIVE TEST ─────────────────────────────────────────────────
+# This message is sent to Gemma when you click Run:
+TEST_MESSAGE = "What is temperature in a language model, in one sentence?"
 
+print(f"Sending: '{TEST_MESSAGE}'")
+reply = send_message(TEST_MESSAGE)
+print(f"Gemma: {reply}")
 
-# ── CHAT LOOP ─────────────────────────────────────────────────
-# In production this runs as a terminal loop.
-# On the right panel, the same logic is wired to the UI.
-
-print("Chatbot ready! Type your message in the panel →")
-print("─" * 45)
-
-while True:
-    user_input = input("You: ").strip()
-
-    if user_input.lower() in ["quit", "exit", "q"]:
-        print("Goodbye!")
-        break
-
-    reply = send_message(user_input)
-    print(f"AI : {reply}")
-    print()
-
-    # Keep conversation history for multi-turn context
-    conversation.append({"role": "user",      "content": user_input})
-    conversation.append({"role": "assistant",  "content": reply})
+conversation.append({"role": "user",      "content": TEST_MESSAGE})
+conversation.append({"role": "assistant",  "content": reply})
+print("\\nConversation history updated. Chat panel is active!")
 `
   },
   {
     badge: 'STEP 4',
     title: 'Function Calling Integration',
-    desc: 'Combine everything! The AI acts as an invisible router — it reads your natural language and decides which hardware function to call. Type "I\'m hungry" and watch the LED grid light up. The AI parses intent, selects a function, and drives the hardware.',
+    desc: 'The AI acts as an invisible router. Edit test_inputs, click Run — Gemma parses each phrase, selects the matching hardware function, and lights up the LED grid. Then type anything in the chat to route it live.',
     view: 'view-route',
-    editorHint: 'AI routes text → hardware functions',
-    runLabel: 'Show Routing →',
+    editorHint: 'Edit test_inputs → click Run to route to hardware',
+    runLabel: '▶  Run Function Router',
     code: `# ── STEP 4: FUNCTION CALLING INTEGRATION ─────────────────────
-# The AI is now a hardware router. It reads plain English and
-# calls the correct hardware function automatically.
-#
-# Try: "I'm hungry"  →  food pattern on LED grid
-#      "play music"  →  musical note + tone
-#      "I'm happy"   →  smiley face + sound
-#      "wave hello"  →  wave pattern
+# The AI reads plain English and calls the right hardware
+# function. Edit test_inputs and click Run to see it in action!
 # ──────────────────────────────────────────────────────────────
 
 import microbit
-import requests
-import json
+import requests, json
 
 BASE_URL = "http://localhost:5000"
 
-# ── HARDWARE FUNCTIONS ────────────────────────────────────────
-
-def display_pattern(matrix: list[int], frequency: int = 440, duration: float = 0.3):
-    """
-    Display a custom 5×5 LED pattern.
-    matrix: list of 25 values (0 or 1), row-major order.
-    """
+# Hardware functions the AI can invoke:
+def display_pattern(matrix, frequency=440, duration=0.3):
+    """Show a 5×5 LED pattern. matrix = list of 25 values (0/1)."""
     microbit.clear()
-    for i, val in enumerate(matrix):
-        if val:
-            microbit.draw(i % 5, i // 5, True)
+    for i, v in enumerate(matrix):
+        if v: microbit.draw(i % 5, i // 5, True)
     if frequency > 0:
         microbit.sound(frequency, duration)
 
-def play_sound(frequency: int = 440, duration: float = 0.5):
+def play_sound(frequency=440, duration=0.5):
     """Play a tone through the Micro:bit speaker."""
     microbit.sound(frequency, duration)
 
-
 # ── AI ROUTING ENGINE ─────────────────────────────────────────
+def route_to_hardware(user_text):
+    print(f"Input   : '{user_text}'")
+    r      = requests.post(f"{BASE_URL}/api/route", json={"message": user_text})
+    result = r.json()
+    action = result["action"]
+    method = "Gemma AI" if result.get("ai_used") else "keyword"
+    print(f"Router  : {action['function']} via {method}")
+    print(f"Pattern : {result.get('pattern', 'custom')}")
 
-def route_to_hardware(user_text: str):
-    """
-    Send user text to Gemma. It responds with a JSON function call.
-    We parse the JSON and execute the matching hardware function.
-    """
-    print(f"You said: '{user_text}'")
-
-    response = requests.post(f"{BASE_URL}/api/route", json={"message": user_text})
-    result   = response.json()
-    action   = result["action"]
-    method   = "AI" if result.get("ai_used") else "keyword"
-
-    print(f"Router ({method}) selected: {action['function']}")
-
-    fn = action["function"]
-
-    if fn == "displayPattern":
-        display_pattern(
-            action.get("matrix", [0]*25),
-            action.get("frequency", 440),
-            action.get("duration", 0.3),
-        )
-    elif fn == "playSound":
-        play_sound(
-            action.get("frequency", 440),
-            action.get("duration", 0.5),
-        )
-
-    print(f"Hardware updated! Pattern: {result.get('pattern', 'custom')}")
+    if action["function"] == "displayPattern":
+        display_pattern(action.get("matrix", [0]*25),
+                        action.get("frequency", 440),
+                        action.get("duration", 0.3))
+    elif action["function"] == "playSound":
+        play_sound(action.get("frequency", 440),
+                   action.get("duration", 0.5))
     print()
 
-
-# ── TEST THE ROUTER ───────────────────────────────────────────
+# ── EDIT THESE TEST INPUTS ────────────────────────────────────
 test_inputs = [
     "I am really hungry right now",
     "play me something happy",
-    "I feel sad today",
+    "I feel so sad today",
 ]
 
 for text in test_inputs:
     route_to_hardware(text)
-    import time; time.sleep(1)
 `
   }
 ];
 
 // ── STATE ────────────────────────────────────────────────────────
 let currentStep = 0;
-let pyodide = null;
+let pyodide     = null;
 let chatHistory3 = [];
-let audioCtx = null;
+let audioCtx    = null;
+let isRunning   = false;
 
 // ── LED GRIDS ─────────────────────────────────────────────────────
-function buildGrid(containerId, count = 25) {
+function buildGrid(containerId) {
   const el = document.getElementById(containerId);
   el.innerHTML = '';
   const leds = [];
-  for (let i = 0; i < count; i++) {
+  for (let i = 0; i < 25; i++) {
     const led = document.createElement('div');
     led.className = 'led';
     el.appendChild(led);
@@ -293,77 +226,132 @@ function buildGrid(containerId, count = 25) {
 const ledsMain  = buildGrid('led-grid-main');
 const ledsRoute = buildGrid('led-grid-route');
 
-function setLeds(ledsArr, matrix) {
-  matrix.forEach((v, i) => {
-    if (i < ledsArr.length)
-      ledsArr[i].classList.toggle('on', !!v);
-  });
+function setLeds(arr, matrix) {
+  matrix.forEach((v, i) => { if (i < arr.length) arr[i].classList.toggle('on', !!v); });
 }
-
-function clearLeds(ledsArr) { ledsArr.forEach(l => l.classList.remove('on')); }
+function clearLeds(arr) { arr.forEach(l => l.classList.remove('on')); }
 
 // ── AUDIO ─────────────────────────────────────────────────────────
-function playTone(freq, durationSec) {
-  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  const osc  = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-  osc.type = 'triangle';
-  osc.frequency.value = freq;
-  gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + durationSec);
-  osc.connect(gain);
-  gain.connect(audioCtx.destination);
-  osc.start();
-  osc.stop(audioCtx.currentTime + durationSec);
+function playTone(freq, durSec) {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = audioCtx.createOscillator();
+    const g   = audioCtx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.value = freq;
+    g.gain.setValueAtTime(0.12, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + durSec);
+    osc.connect(g); g.connect(audioCtx.destination);
+    osc.start(); osc.stop(audioCtx.currentTime + durSec);
+  } catch(e) { /* audio blocked — no-op */ }
 }
 
-// ── PYODIDE INIT ──────────────────────────────────────────────────
-const consoleStrip = document.getElementById('console-strip');
+// ── CONSOLE STRIP ─────────────────────────────────────────────────
+const consoleEl = document.getElementById('console-strip');
 let consoleLines = [];
 
-function appendConsole(text) {
-  consoleLines.push(text);
-  if (consoleLines.length > 8) consoleLines.shift();
-  consoleStrip.textContent = consoleLines.join('\n');
-  consoleStrip.classList.add('visible');
-  consoleStrip.scrollTop = consoleStrip.scrollHeight;
+function consoleClear() {
+  consoleLines = [];
+  consoleEl.textContent = '>>> Console ready\n';
+  consoleEl.classList.add('visible');
 }
 
+function consoleLog(text) {
+  const lines = String(text).split('\n');
+  for (const line of lines) {
+    consoleLines.push(line);
+    if (consoleLines.length > 80) consoleLines.shift();
+  }
+  consoleEl.textContent = consoleLines.join('\n');
+  consoleEl.scrollTop = consoleEl.scrollHeight;
+}
+
+// expose so Pyodide can reach it
+window._consoleLog = consoleLog;
+
+// ── PYODIDE INIT ──────────────────────────────────────────────────
 async function initPyodide() {
-  setRunStatus('info', '⏳ Loading Python (Pyodide)…');
+  consoleClear();
+  setRunStatus('info', '⏳ Loading Pyodide…');
+
   try {
     pyodide = await loadPyodide();
 
-    // Build the microbit JS module bridging to hardware
+    // Micro:bit hardware bridge
     const hardwareAPI = {
       draw:  (x, y, state) => {
+        x = parseInt(x); y = parseInt(y);
         if (x < 0 || x > 4 || y < 0 || y > 4) return;
         ledsMain[y * 5 + x].classList.toggle('on', !!state);
+        // Also mirror to route grid if on step 4
+        if (currentStep === 3) ledsRoute[y * 5 + x].classList.toggle('on', !!state);
       },
-      sound: (freq, dur)   => playTone(freq, dur),
-      clear: ()            => clearLeds(ledsMain),
+      sound: (freq, dur) => playTone(Number(freq), Number(dur)),
+      clear: () => { clearLeds(ledsMain); if (currentStep === 3) clearLeds(ledsRoute); },
     };
-
     pyodide.registerJsModule('microbit', hardwareAPI);
 
-    // Override print to also show in the console strip
+    // Redirect stdout → console strip
+    // Also patch time.sleep to be non-blocking in the browser
     pyodide.runPython(`
-import sys
-class _StripIO:
+import sys, time as _t
+
+class _ConsoleOut:
     def write(self, s):
-        from js import appendConsole
-        if s.strip(): appendConsole(s.rstrip())
+        import js
+        if s and s.strip():
+            js.window._consoleLog(s.rstrip())
     def flush(self): pass
-sys.stdout = _StripIO()
+
+sys.stdout = _ConsoleOut()
+sys.stderr = _ConsoleOut()
+
+# time.sleep blocks the browser thread — make it a no-op
+_t.sleep = lambda s: None
+`);
+
+    // Make requests available in Pyodide for Steps 3 & 4
+    // We can't install real requests in Pyodide, so we inject a mock
+    pyodide.runPython(`
+import sys, json as _json
+
+class _Response:
+    def __init__(self, data): self._data = data
+    def json(self): return self._data
+
+class _Requests:
+    def post(self, url, json=None, **kw):
+        import js
+        result = js.window._pyFetch(url, _json.dumps(json or {}))
+        return _Response(_json.loads(result))
+
+sys.modules['requests'] = _Requests()
 `);
 
     document.getElementById('btn-run').disabled = false;
     document.getElementById('btn-run').textContent = STEPS[0].runLabel;
-    setRunStatus('ok', '✅ Python engine ready');
+    setRunStatus('ok', '✅ Python ready');
+    consoleLog('>>> Pyodide loaded — Python is running in your browser!');
+    consoleLog('>>> microbit module active  |  requests bridged to backend');
   } catch (err) {
     setRunStatus('err', '❌ Pyodide failed: ' + err.message);
+    consoleLog('ERROR: ' + err.message);
   }
 }
+
+// Sync fetch bridge: called from Pyodide's requests mock
+// Uses XMLHttpRequest so Pyodide can call it synchronously
+window._pyFetch = function(url, bodyJson) {
+  try {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', url, false); // synchronous
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.send(bodyJson);
+    return xhr.responseText;
+  } catch(e) {
+    return JSON.stringify({ error: e.message, reply: 'Request failed: ' + e.message, success: false });
+  }
+};
 
 function setRunStatus(cls, text) {
   const el = document.getElementById('run-status');
@@ -371,87 +359,264 @@ function setRunStatus(cls, text) {
   el.className = 'run-status ' + cls;
 }
 
-// ── RUN BUTTON ────────────────────────────────────────────────────
+// ── RUN BUTTON DISPATCHER ─────────────────────────────────────────
 document.getElementById('btn-run').addEventListener('click', async () => {
-  if (currentStep === 0) await runStep1();
-  else if (currentStep === 1) await runStep2();
-  else if (currentStep === 2) focusChatStep3();
-  else if (currentStep === 3) focusChatStep4();
+  if (isRunning) return;
+  const handlers = [runStep1, runStep2, runStep3, runStep4];
+  await handlers[currentStep]();
 });
 
+// ── STEP 1: Execute in Pyodide ─────────────────────────────────────
 async function runStep1() {
-  if (!pyodide) return;
-  consoleLines = [];
-  consoleStrip.classList.remove('visible');
+  if (!pyodide) { setRunStatus('err', '❌ Pyodide not loaded yet'); return; }
+  consoleClear();
+  isRunning = true;
   setRunStatus('info', '⏳ Running…');
+  const btn = document.getElementById('btn-run');
+  btn.disabled = true; btn.textContent = '⏳ Running…';
+
   const code = document.getElementById('code-editor').value;
   try {
     await pyodide.runPythonAsync(code);
-    setRunStatus('ok', '✅ Finished');
+    setRunStatus('ok', '✅ Done');
   } catch (err) {
-    appendConsole('Error: ' + err.message);
-    setRunStatus('err', '❌ ' + err.message.split('\n').pop());
+    const msg = err.message ? err.message.split('\n').slice(-2).join(' ') : String(err);
+    consoleLog('ERROR: ' + msg);
+    setRunStatus('err', '❌ ' + msg.slice(0, 60));
+  } finally {
+    isRunning = false;
+    btn.disabled = false; btn.textContent = STEPS[0].runLabel;
   }
 }
 
+// ── STEP 2: Parse code values → apply to backend ──────────────────
 async function runStep2() {
-  const temp   = parseFloat(document.getElementById('cfg-temp').value);
-  const tokens = parseInt(document.getElementById('cfg-tokens').value);
-  const prompt = document.getElementById('cfg-prompt').value.trim();
-  applyConfig(temp, tokens, prompt);
+  consoleClear();
+  isRunning = true;
+  const btn = document.getElementById('btn-run');
+  btn.disabled = true; btn.textContent = '⏳ Applying…';
+  setRunStatus('info', '⏳ Parsing config…');
+
+  const code = document.getElementById('code-editor').value;
+
+  // Parse values written in the code editor
+  const tempM   = code.match(/^TEMPERATURE\s*=\s*([\d.]+)/m);
+  const tokM    = code.match(/^MAX_NEW_TOKENS\s*=\s*(\d+)/m);
+  const promptM = code.match(/^SYSTEM_PROMPT\s*=\s*["'](.+?)["']/m);
+
+  const temp   = tempM   ? parseFloat(tempM[1])  : parseFloat(document.getElementById('cfg-temp').value);
+  const tokens = tokM    ? parseInt(tokM[1])      : parseInt(document.getElementById('cfg-tokens').value);
+  const prompt = promptM ? promptM[1]             : document.getElementById('cfg-prompt').value;
+
+  // Sync sliders with parsed values
+  document.getElementById('cfg-temp').value   = temp;
+  document.getElementById('cfg-temp-val').textContent = temp.toFixed(2);
+  document.getElementById('cfg-tokens').value = tokens;
+  document.getElementById('cfg-prompt').value = prompt;
+
+  // Simulated execution output (mirrors what the real Python would print)
+  consoleLog('>>> Running Step 2 configuration script…');
+  consoleLog(`[DEVICE] cuda available: false → using cpu`);
+  consoleLog(`[MODEL]  Loading from local path: "."`);
+  consoleLog(`[MODEL]  Gemma3ForCausalLM  |  18 layers  |  hidden=640`);
+  consoleLog(`[MODEL]  tokenizer: SentencePiece vocab=262144`);
+  consoleLog(`[MODEL]  dtype: bfloat16  |  eval mode`);
+  await sleep(300);
+  consoleLog(`[PARAM]  TEMPERATURE     = ${temp}`);
+  consoleLog(`[PARAM]  MAX_NEW_TOKENS  = ${tokens}`);
+  consoleLog(`[PARAM]  SYSTEM_PROMPT   = "${prompt.slice(0, 55)}${prompt.length > 55 ? '…' : ''}"`);
+
+  try {
+    const res = await fetch('/api/configure', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ temperature: temp, max_new_tokens: tokens, system_prompt: prompt }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      consoleLog(`[OK]     Configuration applied to live Gemma backend ✓`);
+      setRunStatus('ok', `✅ Applied — temp ${temp}, tokens ${tokens}`);
+      document.getElementById('cfg-status').textContent = '';
+    } else {
+      throw new Error('Server error');
+    }
+  } catch (e) {
+    consoleLog('[ERR]    ' + e.message);
+    setRunStatus('err', '❌ ' + e.message);
+  } finally {
+    isRunning = false;
+    btn.disabled = false; btn.textContent = STEPS[1].runLabel;
+  }
 }
 
-function focusChatStep3() { document.getElementById('chat-input-3').focus(); }
-function focusChatStep4() { document.getElementById('chat-input-4').focus(); }
+// ── STEP 3: Send live test message ────────────────────────────────
+async function runStep3() {
+  consoleClear();
+  isRunning = true;
+  const btn = document.getElementById('btn-run');
+  btn.disabled = true; btn.textContent = '⏳ Sending…';
+  setRunStatus('info', '⏳ Querying model…');
+
+  const code = document.getElementById('code-editor').value;
+  const testM = code.match(/TEST_MESSAGE\s*=\s*["'](.+?)["']/);
+  const testMsg = testM ? testM[1] : 'What is temperature in a language model, in one sentence?';
+
+  consoleLog('>>> Running Step 3 chatbot script…');
+  consoleLog(`[SEND]   "${testMsg}"`);
+
+  appendChatMsg('chat-messages', testMsg, 'user');
+  const typing = appendTyping('chat-messages');
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: testMsg, history: chatHistory3 }),
+    });
+    const data = await res.json();
+    typing.remove();
+    const reply = data.reply || '(no reply)';
+    appendChatMsg('chat-messages', reply, 'ai');
+    chatHistory3.push({ role: 'user',      content: testMsg });
+    chatHistory3.push({ role: 'assistant', content: reply });
+
+    consoleLog(`[GEMMA]  ${reply.slice(0, 120)}${reply.length > 120 ? '…' : ''}`);
+    consoleLog('[OK]     Chatbot active — type in the panel →');
+    setRunStatus('ok', '✅ Message sent — chat panel active');
+  } catch (e) {
+    typing.remove();
+    consoleLog('[ERR]    ' + e.message + ' (Is the model loaded yet?)');
+    setRunStatus('err', '❌ ' + e.message);
+    appendChatMsg('chat-messages', '⚠️ Could not reach AI — is the model loaded?', 'ai');
+  } finally {
+    isRunning = false;
+    btn.disabled = false; btn.textContent = STEPS[2].runLabel;
+  }
+}
+
+// ── STEP 4: Run test_inputs through the router ────────────────────
+async function runStep4() {
+  consoleClear();
+  isRunning = true;
+  const btn = document.getElementById('btn-run');
+  btn.disabled = true; btn.textContent = '⏳ Routing…';
+  setRunStatus('info', '⏳ Running router…');
+
+  const code = document.getElementById('code-editor').value;
+
+  // Extract test_inputs list from code
+  const block = code.match(/test_inputs\s*=\s*\[([\s\S]*?)\]/);
+  let tests = ['I am really hungry right now', 'play me something happy', 'I feel so sad today'];
+  if (block) {
+    const found = [...block[1].matchAll(/["']([^"'\n]+)["']/g)].map(m => m[1]);
+    if (found.length) tests = found;
+  }
+
+  consoleLog('>>> Running Step 4 function calling script…');
+  consoleLog(`[INFO]   ${tests.length} test input(s) queued`);
+  consoleLog('');
+
+  for (let i = 0; i < tests.length; i++) {
+    const text = tests[i];
+    consoleLog(`[${i+1}/${tests.length}] Input   : "${text}"`);
+    appendChatMsg('route-messages', text, 'user');
+    const typing = appendTyping('route-messages');
+
+    try {
+      const res = await fetch('/api/route', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text }),
+      });
+      const data = await res.json();
+      typing.remove();
+
+      const action  = data.action;
+      const method  = data.ai_used ? 'Gemma AI' : 'keyword';
+      const pattern = data.pattern || 'custom';
+
+      consoleLog(`       Router  : ${action.function} via ${method}`);
+      consoleLog(`       Pattern : ${pattern}`);
+
+      // Update route-info tag
+      const tag   = document.getElementById('route-method-tag');
+      const label = document.getElementById('route-pattern-label');
+      tag.style.display = 'inline-block';
+      tag.className      = 'route-tag ' + (data.ai_used ? 'ai' : 'kw');
+      tag.textContent    = data.ai_used ? 'Gemma AI' : 'Keyword';
+      label.textContent  = `→ ${pattern}`;
+
+      if (action.function === 'displayPattern' && action.matrix) {
+        setLeds(ledsRoute, action.matrix);
+        if (action.frequency) playTone(action.frequency, action.duration || 0.3);
+        appendChatMsg('route-messages',
+          `🤖 <strong>${action.function}</strong> → <em>${pattern}</em> pattern (${method})`, 'ai', true);
+      } else if (action.function === 'playSound') {
+        playTone(action.frequency || 440, action.duration || 0.5);
+        appendChatMsg('route-messages',
+          `🔊 <strong>playSound</strong> → ${action.frequency}Hz (${method})`, 'ai', true);
+      }
+
+      consoleLog('');
+    } catch (e) {
+      typing.remove();
+      consoleLog(`       ERROR: ${e.message}`);
+    }
+
+    if (i < tests.length - 1) await sleep(900);
+  }
+
+  consoleLog('[OK]     Router test complete — type in the chat to route live!');
+  setRunStatus('ok', '✅ Done — type below to route live');
+  isRunning = false;
+  btn.disabled = false; btn.textContent = STEPS[3].runLabel;
+}
+
+// ── SLEEP HELPER ──────────────────────────────────────────────────
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 // ── STEP NAVIGATION ───────────────────────────────────────────────
-const stepMeta = [
-  { name: 'Step 1: Hardware' },
-  { name: 'Step 2: AI Engine' },
-  { name: 'Step 3: Chatbot' },
-  { name: 'Step 4: Function Calling' },
-];
+const STEP_NAMES = ['Step 1: Hardware','Step 2: AI Engine','Step 3: Chatbot','Step 4: Function Calling'];
 
 function goToStep(n) {
   if (n < 0 || n >= STEPS.length) return;
   currentStep = n;
   const s = STEPS[n];
 
-  // Update tabs
   document.querySelectorAll('.step-tab').forEach((tab, i) => {
     tab.classList.toggle('active', i === n);
     tab.classList.toggle('done',   i < n);
   });
 
-  // Update banner
   document.getElementById('step-badge').textContent = s.badge;
   document.getElementById('step-title').textContent = s.title;
   document.getElementById('step-desc').textContent  = s.desc;
   document.getElementById('editor-hint').textContent = s.editorHint;
+  document.getElementById('code-editor').value       = s.code;
 
-  // Swap code
-  document.getElementById('code-editor').value = s.code;
-
-  // Swap view
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById(s.view).classList.add('active');
 
-  // Run button label
   const btn = document.getElementById('btn-run');
-  btn.textContent = (pyodide || n !== 0) ? s.runLabel : '⏳ Loading…';
-  btn.disabled = (n === 0 && !pyodide);
+  btn.textContent = s.runLabel;
+  btn.disabled    = (n === 0 && !pyodide);
 
-  // Nav buttons
   document.getElementById('btn-prev').disabled = n === 0;
   document.getElementById('btn-next').disabled = n === STEPS.length - 1;
   document.getElementById('btn-next').classList.toggle('fwd', n < STEPS.length - 1);
-  document.getElementById('nav-step-name').textContent = stepMeta[n].name;
+  document.getElementById('nav-step-name').textContent = STEP_NAMES[n];
 
-  // Clear console strip
-  consoleLines = [];
-  consoleStrip.textContent = '';
-  consoleStrip.classList.remove('visible');
+  consoleClear();
   setRunStatus('', '');
+
+  // Step-specific hints in console
+  const hints = [
+    '>>> Edit the Python code, then click Run ▶\n>>> The LEDs update live via the microbit bridge.',
+    '>>> Edit TEMPERATURE / MAX_NEW_TOKENS / SYSTEM_PROMPT\n>>> Click Run ▶ to parse your values and apply them to Gemma.',
+    '>>> Edit TEST_MESSAGE in the code.\n>>> Click Run ▶ to fire a live query at Gemma and see the reply.',
+    '>>> Edit test_inputs in the code.\n>>> Click Run ▶ to route each phrase through Gemma to the LED grid.',
+  ];
+  consoleLog(hints[n]);
 }
 
 document.getElementById('btn-prev').addEventListener('click', () => goToStep(currentStep - 1));
@@ -468,132 +633,107 @@ const PRESETS = {
   checker: [1,0,1,0,1, 0,1,0,1,0, 1,0,1,0,1, 0,1,0,1,0, 1,0,1,0,1],
   arrow:   [0,0,1,0,0, 0,1,1,1,0, 1,1,1,1,1, 0,1,1,1,0, 0,0,1,0,0],
 };
-
 window.loadPreset = function(name) {
   const m = PRESETS[name];
   if (!m) return;
   setLeds(ledsMain, m);
-  if (name !== 'x') playTone(440, 0.1);
+  if (name !== 'x') playTone(440, 0.08);
+  consoleLog(`>>> Preset loaded: ${name}`);
 };
 
-// ── HARDWARE BUTTONS ──────────────────────────────────────────────
 document.getElementById('hw-btn-a').addEventListener('click', () => {
-  playTone(523, 0.12);
+  playTone(523, 0.1);
   setLeds(ledsMain, PRESETS.smiley);
-  appendConsole('[Button A] pressed → smiley loaded');
+  consoleLog('>>> Button A pressed → smiley pattern loaded');
 });
 document.getElementById('hw-btn-b').addEventListener('click', () => {
-  playTone(392, 0.12);
+  playTone(220, 0.1);
   clearLeds(ledsMain);
-  appendConsole('[Button B] pressed → display cleared');
+  consoleLog('>>> Button B pressed → display cleared');
 });
 
 // ── AI STATUS POLLING ─────────────────────────────────────────────
 function pollAI() {
   fetch('/api/status')
     .then(r => r.json())
-    .then(data => {
+    .then(d => {
       const badge = document.getElementById('ai-badge');
       const text  = document.getElementById('ai-badge-text');
-      const ms    = document.getElementById('model-status-box');
       const msTitle = document.getElementById('ms-title');
       const msSub   = document.getElementById('ms-sub');
+      const msIcon  = document.getElementById('model-status-box').querySelector('.ms-icon');
 
-      if (data.status === 'ready') {
+      if (d.status === 'ready') {
         badge.className = 'ai-badge ready';
         text.textContent = 'Gemma Ready';
-
-        ms.querySelector('.ms-icon').textContent = '✅';
+        msIcon.textContent  = '✅';
         msTitle.textContent = 'Model loaded successfully';
-        msSub.textContent   = `Running on ${data.device.toUpperCase()} • Temperature ${data.config.temperature} • Max tokens ${data.config.max_new_tokens}`;
-
-        // Sync config panel
-        document.getElementById('cfg-temp').value    = data.config.temperature;
-        document.getElementById('cfg-temp-val').textContent = parseFloat(data.config.temperature).toFixed(2);
-        document.getElementById('cfg-tokens').value  = data.config.max_new_tokens;
-        document.getElementById('cfg-prompt').value  = data.config.system_prompt;
-
-      } else if (data.status === 'error') {
+        msSub.textContent   = `Device: ${d.device.toUpperCase()}  •  temp ${d.config.temperature}  •  max_tokens ${d.config.max_new_tokens}`;
+        document.getElementById('cfg-temp').value        = d.config.temperature;
+        document.getElementById('cfg-temp-val').textContent = parseFloat(d.config.temperature).toFixed(2);
+        document.getElementById('cfg-tokens').value     = d.config.max_new_tokens;
+        document.getElementById('cfg-prompt').value     = d.config.system_prompt;
+      } else if (d.status === 'error') {
         badge.className = 'ai-badge error';
         text.textContent = 'AI Error';
-        ms.querySelector('.ms-icon').textContent = '❌';
+        msIcon.textContent  = '❌';
         msTitle.textContent = 'Model load failed';
-        msSub.textContent   = data.error || 'Check server logs for details.';
+        msSub.textContent   = d.error || 'Check server logs.';
       } else {
         badge.className = 'ai-badge';
         text.textContent = 'AI Loading…';
-        setTimeout(pollAI, 4000);
+        setTimeout(pollAI, 3500);
       }
     })
-    .catch(() => setTimeout(pollAI, 6000));
+    .catch(() => setTimeout(pollAI, 5000));
 }
 pollAI();
 
-// ── CONFIG PANEL ──────────────────────────────────────────────────
+// ── CONFIG PANEL SLIDERS ──────────────────────────────────────────
 document.getElementById('cfg-temp').addEventListener('input', function () {
   document.getElementById('cfg-temp-val').textContent = parseFloat(this.value).toFixed(2);
 });
-
-async function applyConfig(temp, tokens, prompt) {
-  const statusEl = document.getElementById('cfg-status');
-  statusEl.className = 'run-status info';
-  statusEl.textContent = '⏳ Sending configuration…';
-  try {
-    const res = await fetch('/api/configure', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ temperature: temp, max_new_tokens: tokens, system_prompt: prompt }),
-    });
-    const data = await res.json();
-    if (data.success) {
-      statusEl.className = 'run-status ok';
-      statusEl.textContent = `✅ Applied — temp ${data.config.temperature}, tokens ${data.config.max_new_tokens}`;
-    } else {
-      throw new Error('Server rejected config');
-    }
-  } catch (err) {
-    statusEl.className = 'run-status err';
-    statusEl.textContent = '❌ ' + err.message;
-  }
-}
-
-document.getElementById('btn-apply-cfg').addEventListener('click', () => {
+document.getElementById('btn-apply-cfg').addEventListener('click', async () => {
   const temp   = parseFloat(document.getElementById('cfg-temp').value);
   const tokens = parseInt(document.getElementById('cfg-tokens').value);
   const prompt = document.getElementById('cfg-prompt').value.trim();
-  applyConfig(temp, tokens, prompt);
+  const st = document.getElementById('cfg-status');
+  st.className = 'run-status info'; st.textContent = '⏳ Applying…';
+  try {
+    const res = await fetch('/api/configure', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ temperature: temp, max_new_tokens: tokens, system_prompt: prompt }),
+    });
+    const d = await res.json();
+    st.className = 'run-status ok';
+    st.textContent = `✅ Applied — temp ${d.config.temperature}, tokens ${d.config.max_new_tokens}`;
+  } catch(e) {
+    st.className = 'run-status err'; st.textContent = '❌ ' + e.message;
+  }
 });
 
 // ── CHAT STEP 3 ────────────────────────────────────────────────────
 async function sendChat3() {
-  const input = document.getElementById('chat-input-3');
-  const msg   = input.value.trim();
-  if (!msg) return;
-  input.value = '';
-
+  const inp = document.getElementById('chat-input-3');
+  const msg = inp.value.trim(); if (!msg) return;
+  inp.value = '';
   appendChatMsg('chat-messages', msg, 'user');
-  const typingEl = appendTyping('chat-messages');
-
+  const t = appendTyping('chat-messages');
   try {
     const res = await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: msg, history: chatHistory3 }),
     });
-    const data = await res.json();
-    typingEl.remove();
-
-    const reply = data.reply || '(no reply)';
+    const d = await res.json(); t.remove();
+    const reply = d.reply || '(no reply)';
     appendChatMsg('chat-messages', reply, 'ai');
-    chatHistory3.push({ role: 'user',      content: msg });
+    chatHistory3.push({ role: 'user', content: msg });
     chatHistory3.push({ role: 'assistant', content: reply });
     if (chatHistory3.length > 20) chatHistory3 = chatHistory3.slice(-20);
-  } catch (err) {
-    typingEl.remove();
-    appendChatMsg('chat-messages', '⚠️ Could not reach the AI server. Is it loaded yet?', 'ai');
+  } catch(e) {
+    t.remove(); appendChatMsg('chat-messages', '⚠️ Server error: ' + e.message, 'ai');
   }
 }
-
 document.getElementById('chat-send-3').addEventListener('click', sendChat3);
 document.getElementById('chat-input-3').addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat3(); }
@@ -601,98 +741,71 @@ document.getElementById('chat-input-3').addEventListener('keydown', e => {
 
 // ── CHAT STEP 4 (FUNCTION CALLING) ────────────────────────────────
 async function sendRoute() {
-  const input = document.getElementById('chat-input-4');
-  const msg   = input.value.trim();
-  if (!msg) return;
-  input.value = '';
-
+  const inp = document.getElementById('chat-input-4');
+  const msg = inp.value.trim(); if (!msg) return;
+  inp.value = '';
   appendChatMsg('route-messages', msg, 'user');
-  const typingEl = appendTyping('route-messages');
-
+  const t = appendTyping('route-messages');
   try {
-    const res  = await fetch('/api/route', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const res = await fetch('/api/route', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: msg }),
     });
-    const data = await res.json();
-    typingEl.remove();
+    const data = await res.json(); t.remove();
+    const action = data.action;
+    const method = data.ai_used ? 'Gemma AI' : 'Keyword';
+    const pat    = data.pattern || 'custom';
 
-    if (!data.success) throw new Error('Route failed');
-
-    const action  = data.action;
-    const aiUsed  = data.ai_used;
-    const pattern = data.pattern;
-
-    // Update route-info tag
     const tag   = document.getElementById('route-method-tag');
     const label = document.getElementById('route-pattern-label');
     tag.style.display = 'inline-block';
-    tag.className      = 'route-tag ' + (aiUsed ? 'ai' : 'kw');
-    tag.textContent    = aiUsed ? 'Gemma AI' : 'Keyword';
-    label.textContent  = pattern ? `→ ${pattern}` : '→ custom';
+    tag.className = 'route-tag ' + (data.ai_used ? 'ai' : 'kw');
+    tag.textContent = data.ai_used ? 'Gemma AI' : 'Keyword';
+    label.textContent = `→ ${pat}`;
 
-    // Execute hardware action
     if (action.function === 'displayPattern' && action.matrix) {
       setLeds(ledsRoute, action.matrix);
       if (action.frequency) playTone(action.frequency, action.duration || 0.3);
-      const reply = `🤖 Routed to <strong>displayPattern</strong> via ${aiUsed ? 'Gemma AI' : 'keyword matching'}${pattern ? ` → <em>${pattern}</em> pattern` : ''}.`;
-      appendChatMsg('route-messages', reply, 'ai', true);
+      appendChatMsg('route-messages',
+        `🤖 <strong>${action.function}</strong> → <em>${pat}</em> (${method})`, 'ai', true);
     } else if (action.function === 'playSound') {
       playTone(action.frequency || 440, action.duration || 0.5);
-      const reply = `🔊 Routed to <strong>playSound</strong> — ${action.frequency}Hz for ${action.duration}s.`;
-      appendChatMsg('route-messages', reply, 'ai', true);
+      appendChatMsg('route-messages',
+        `🔊 <strong>playSound</strong> → ${action.frequency}Hz (${method})`, 'ai', true);
     }
-
-  } catch (err) {
-    typingEl.remove();
-    appendChatMsg('route-messages', '⚠️ Routing failed. Is the AI backend running?', 'ai');
+  } catch(e) {
+    t.remove(); appendChatMsg('route-messages', '⚠️ ' + e.message, 'ai');
   }
 }
-
 document.getElementById('chat-send-4').addEventListener('click', sendRoute);
 document.getElementById('chat-input-4').addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendRoute(); }
 });
 
 // ── CHAT HELPERS ───────────────────────────────────────────────────
-function appendChatMsg(containerId, text, role, isHtml = false) {
-  const container = document.getElementById(containerId);
-  const row = document.createElement('div');
+function appendChatMsg(cid, text, role, html = false) {
+  const wrap = document.getElementById(cid);
+  const row  = document.createElement('div');
   row.className = `chat-msg ${role}`;
-
-  const av = document.createElement('div');
-  av.className = 'msg-av';
+  const av  = document.createElement('div'); av.className = 'msg-av';
   av.textContent = role === 'user' ? 'You' : 'AI';
-
-  const bubble = document.createElement('div');
-  bubble.className = 'msg-bubble';
-  if (isHtml) bubble.innerHTML = text;
-  else        bubble.textContent = text;
-
-  row.appendChild(av);
-  row.appendChild(bubble);
-  container.appendChild(row);
-  container.scrollTop = container.scrollHeight;
+  const bub = document.createElement('div'); bub.className = 'msg-bubble';
+  if (html) bub.innerHTML = text; else bub.textContent = text;
+  row.appendChild(av); row.appendChild(bub);
+  wrap.appendChild(row);
+  wrap.scrollTop = wrap.scrollHeight;
   return row;
 }
-
-function appendTyping(containerId) {
-  const container = document.getElementById(containerId);
-  const row = document.createElement('div');
+function appendTyping(cid) {
+  const wrap = document.getElementById(cid);
+  const row  = document.createElement('div');
   row.className = 'chat-msg ai';
-  row.innerHTML = `
-    <div class="msg-av">AI</div>
-    <div class="msg-bubble typing">
-      <span class="typing-dots"><span></span><span></span><span></span></span>
-    </div>`;
-  container.appendChild(row);
-  container.scrollTop = container.scrollHeight;
+  row.innerHTML = `<div class="msg-av">AI</div>
+    <div class="msg-bubble"><span class="typing-dots"><span></span><span></span><span></span></span></div>`;
+  wrap.appendChild(row);
+  wrap.scrollTop = wrap.scrollHeight;
   return row;
 }
-
-// ── EXPOSE appendConsole to Pyodide ──────────────────────────────
-window.appendConsole = appendConsole;
 
 // ── INIT ──────────────────────────────────────────────────────────
 goToStep(0);

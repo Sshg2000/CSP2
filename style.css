@@ -148,10 +148,9 @@ header {
 .console-strip {
   background: #07070a; border-top: 1px solid var(--border);
   padding: 4px 13px; font-family: var(--mono); font-size: 0.67rem;
-  color: #6ee7b7; max-height: 54px; overflow-y: auto;
-  white-space: pre-wrap; flex-shrink: 0; display: none;
+  color: #6ee7b7; height: 72px; overflow-y: auto;
+  white-space: pre-wrap; flex-shrink: 0; display: block;
 }
-.console-strip.visible { display: block; }
 
 /* OUTPUT PANEL */
 .out-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
