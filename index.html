@@ -15,23 +15,19 @@
 
   <div class="step-tabs">
     <div class="step-tab active" data-step="0">
-      <div class="num">1</div>
-      <div class="lbl">Hardware</div>
+      <div class="num">1</div><div class="lbl">Hardware</div>
     </div>
     <div class="tab-sep"></div>
     <div class="step-tab" data-step="1">
-      <div class="num">2</div>
-      <div class="lbl">AI Engine</div>
+      <div class="num">2</div><div class="lbl">AI Engine</div>
     </div>
     <div class="tab-sep"></div>
     <div class="step-tab" data-step="2">
-      <div class="num">3</div>
-      <div class="lbl">Chatbot</div>
+      <div class="num">3</div><div class="lbl">Chatbot</div>
     </div>
     <div class="tab-sep"></div>
     <div class="step-tab" data-step="3">
-      <div class="num">4</div>
-      <div class="lbl">Function Calling</div>
+      <div class="num">4</div><div class="lbl">Function Calling</div>
     </div>
   </div>
 
@@ -46,7 +42,7 @@
   <div class="step-badge" id="step-badge">STEP 1</div>
   <div class="step-info">
     <h2 id="step-title">Hardware Controls</h2>
-    <p id="step-desc">Write Python to control the Micro:bit's 5×5 LED grid and speaker. Use <code>microbit.draw(x, y, on)</code>, <code>microbit.sound(freq, sec)</code>, and <code>microbit.clear()</code>. Press buttons A &amp; B to fire hardware events. Click Run to execute your code live in the browser via Pyodide.</p>
+    <p id="step-desc"></p>
   </div>
 </div>
 
@@ -57,18 +53,29 @@
   <div class="code-panel">
     <div class="panel-bar">
       <div class="bar-title">
-        <div class="bar-dots"><div class="bar-dot r"></div><div class="bar-dot y"></div><div class="bar-dot g"></div></div>
+        <div class="bar-dots">
+          <div class="bar-dot r"></div>
+          <div class="bar-dot y"></div>
+          <div class="bar-dot g"></div>
+        </div>
         Python Editor
       </div>
-      <div style="font-size:0.65rem;color:var(--text-dim);" id="editor-hint">Pyodide • runs in browser</div>
+      <div class="editor-hint" id="editor-hint">Pyodide • runs in browser</div>
     </div>
 
+    <!-- INSTRUCTIONS PANEL -->
+    <div class="instructions-panel" id="instructions-panel"></div>
+
+    <!-- CODE EDITOR -->
     <textarea id="code-editor" spellcheck="false"></textarea>
 
+    <!-- CONSOLE OUTPUT -->
     <div class="console-strip" id="console-strip"></div>
 
+    <!-- FOOTER: run + hint -->
     <div class="code-footer">
       <button class="btn-run" id="btn-run" disabled>⏳ Loading…</button>
+      <button class="btn-hint" id="btn-hint" title="Show a hint">💡 Hint</button>
       <div class="run-status" id="run-status">Initialising Python engine…</div>
     </div>
   </div>
@@ -92,7 +99,7 @@
       </div>
     </div>
 
-    <!-- VIEW 2: AI CONFIG -->
+    <!-- VIEW 2: AI CONFIG — code-driven, no sliders -->
     <div class="view" id="view-config">
       <div class="cfg-section">
         <div class="cfg-title">Model Status</div>
@@ -100,36 +107,39 @@
           <div class="ms-icon">⏳</div>
           <div class="ms-body">
             <strong id="ms-title">Loading Gemma model…</strong>
-            <span id="ms-sub">PyTorch is initialising the local model files. This may take 30–60 seconds.</span>
+            <span id="ms-sub">PyTorch is initialising local model files. This may take a moment.</span>
           </div>
         </div>
       </div>
 
       <div class="cfg-section">
-        <div class="cfg-title">Inference Hyperparameters</div>
-        <div class="cfg-row">
-          <div class="cfg-lbl">Temperature</div>
-          <input type="range" id="cfg-temp" min="0.1" max="1.5" step="0.05" value="0.7">
-          <div class="cfg-val" id="cfg-temp-val">0.70</div>
+        <div class="cfg-title">Live Configuration</div>
+        <div class="cfg-live-desc">
+          Values update here when you run your Python code on the left.
         </div>
-        <div class="cfg-row">
-          <div class="cfg-lbl">Max New Tokens</div>
-          <input type="number" id="cfg-tokens" min="10" max="500" value="200">
+        <div class="cfg-live-row">
+          <span class="cfg-live-key">TEMPERATURE</span>
+          <span class="cfg-live-val" id="live-temp">—</span>
         </div>
+        <div class="cfg-live-row">
+          <span class="cfg-live-key">MAX_NEW_TOKENS</span>
+          <span class="cfg-live-val" id="live-tokens">—</span>
+        </div>
+        <div class="cfg-live-row cfg-live-row--prompt">
+          <span class="cfg-live-key">SYSTEM_PROMPT</span>
+          <span class="cfg-live-val cfg-live-val--prompt" id="live-prompt">—</span>
+        </div>
+        <div class="run-status" id="cfg-status" style="margin-top:10px;"></div>
       </div>
 
       <div class="cfg-section">
-        <div class="cfg-title">System Prompt</div>
-        <textarea class="cfg-textarea" id="cfg-prompt">You are a helpful AI classroom assistant. Be concise and friendly.</textarea>
-      </div>
-
-      <div class="cfg-section" style="border-color:var(--indigo)">
-        <div class="cfg-title">Apply Configuration</div>
-        <div style="font-size:0.73rem;color:var(--text-dim);margin-bottom:8px;">
-          Sends your settings to the PyTorch backend running the Gemma model. Changes take effect on the next API call.
+        <div class="cfg-title">How it works</div>
+        <div class="cfg-explainer">
+          Click <strong>Run ▶</strong> and your three variables are read
+          from the editor, validated, and sent to the PyTorch backend
+          via <code>/api/configure</code>. The Gemma model uses your
+          settings on every request from Step 3 onwards.
         </div>
-        <button class="btn-apply" id="btn-apply-cfg">Apply Settings →</button>
-        <div class="run-status" id="cfg-status" style="margin-top:6px;"></div>
       </div>
     </div>
 
@@ -138,7 +148,7 @@
       <div class="chat-messages" id="chat-messages">
         <div class="chat-msg ai">
           <div class="msg-av">AI</div>
-          <div class="msg-bubble">Welcome to Step 3! I'm powered by the local Gemma model. Ask me anything — try "What is PyTorch?" or "Explain temperature in AI models."</div>
+          <div class="msg-bubble">Welcome to Step 3! I'm powered by the local Gemma model. Complete the code on the left, then type here to chat.</div>
         </div>
       </div>
       <div class="chat-input-bar">
@@ -158,18 +168,18 @@
         <div class="route-info">
           <span>AI router active</span>
           <span class="route-tag ai" id="route-method-tag" style="display:none">AI</span>
-          <span id="route-pattern-label" style="font-size:0.69rem;color:var(--text-dim);">Type below to trigger hardware →</span>
+          <span id="route-pattern-label" style="font-size:0.69rem;color:var(--text-dim);">Run your code to trigger hardware →</span>
         </div>
       </div>
       <div class="route-chat">
         <div class="chat-messages" id="route-messages">
           <div class="chat-msg ai">
             <div class="msg-av">AI</div>
-            <div class="msg-bubble">I'm the invisible router. Type a natural statement and I'll figure out what to display on the Micro:bit. Try: <em>"I'm hungry"</em>, <em>"play some music"</em>, or <em>"I'm so happy!"</em></div>
+            <div class="msg-bubble">I'm the invisible router. Complete the code, click Run ▶, then type anything here to route it live.</div>
           </div>
         </div>
         <div class="chat-input-bar">
-          <textarea class="chat-input" id="chat-input-4" placeholder="e.g. I'm hungry… play music… I feel great! (Enter to send)" rows="1"></textarea>
+          <textarea class="chat-input" id="chat-input-4" placeholder="e.g. I'm hungry… play music… I feel great! (Enter)" rows="1"></textarea>
           <button class="btn-send" id="chat-send-4">➤</button>
         </div>
       </div>
@@ -177,6 +187,17 @@
 
   </div><!-- /out-panel -->
 </div><!-- /workspace -->
+
+<!-- HINT POPUP -->
+<div class="hint-overlay" id="hint-overlay">
+  <div class="hint-card" id="hint-card">
+    <div class="hint-card-header">
+      <span>💡 Hint</span>
+      <button class="hint-close" id="hint-close">✕</button>
+    </div>
+    <pre class="hint-body" id="hint-body"></pre>
+  </div>
+</div>
 
 <!-- NAV BAR -->
 <div class="nav-bar">

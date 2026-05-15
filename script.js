@@ -4,210 +4,265 @@
 
 // ── STEP DEFINITIONS ────────────────────────────────────────────
 const STEPS = [
+  // ── STEP 1: HARDWARE ──────────────────────────────────────────
   {
     badge: 'STEP 1',
     title: 'Hardware Controls',
-    desc: 'Write Python to control the Micro:bit\'s 5×5 LED grid and speaker. Use microbit.draw(x, y, on), microbit.sound(freq, sec), and microbit.clear(). Press A & B for hardware events. Click Run — Pyodide executes your Python live in the browser.',
-    view: 'view-hw',
+    desc:  'Write Python to control the Micro:bit\'s 5×5 LED grid and speaker. Your code runs live in the browser via Pyodide.',
+    view:  'view-hw',
     editorHint: 'Pyodide • runs live in browser',
     runLabel: '▶  Run Code',
-    code: `import microbit
 
-# ── STEP 1: HARDWARE CONTROLS ─────────────────────────────────
-# Functions you can use:
-#   microbit.draw(x, y, True/False)  — toggle an LED at (x, y)
-#   microbit.sound(frequency, secs)  — play a tone via Web Audio
-#   microbit.clear()                 — turn all LEDs off
-#
-# Coordinates: (0,0) = top-left,  (4,4) = bottom-right
-# Modify this code and click Run to see it on the board!
-# ──────────────────────────────────────────────────────────────
+    instructions: `GOAL  Control the Micro:bit's 5×5 LED grid and speaker from Python.
+
+FUNCTIONS AVAILABLE
+  microbit.draw(x, y, True)   — light up the LED at column x, row y
+  microbit.draw(x, y, False)  — turn it off
+  microbit.sound(freq, secs)  — play a tone  (e.g. 440 Hz for 0.2 s)
+  microbit.clear()            — turn all 25 LEDs off
+
+COORDINATES   (0,0) = top-left corner     (4,4) = bottom-right
+
+TASK  Clear the display, draw a pattern of your choice, and play at
+      least one sound. Click ▶ Run Code to see it on the board.`,
+
+    hint: `How to draw patterns by looping over coordinates:
+
+  positions = [(0,0), (1,1), (2,2), (3,3), (4,4)]
+  for x, y in positions:
+      microbit.draw(x, y, True)
+
+To draw a full row (e.g. row 2):
+  for x in range(5):
+      microbit.draw(x, 2, True)
+
+Common note frequencies (Hz):
+  C4=262  D4=294  E4=330  F4=349  G4=392  A4=440  C5=523
+
+  microbit.sound(523, 0.2)   # plays C5 for 0.2 seconds`,
+
+    code:
+`import microbit
 
 microbit.clear()
 
-# Draw a smiley face
-eyes  = [(1, 1), (3, 1)]
-mouth = [(1, 3), (2, 3), (3, 3)]
+# TODO: Draw your own pattern using microbit.draw(x, y, True)
+#       x = column (0–4, left to right)
+#       y = row    (0–4, top to bottom)
 
-for x, y in eyes:
-    microbit.draw(x, y, True)
 
-for x, y in mouth:
-    microbit.draw(x, y, True)
+# TODO: Play at least one tone using microbit.sound(frequency, seconds)
 
-# Play a cheerful rising arpeggio
-microbit.sound(523, 0.12)   # C5
-microbit.sound(659, 0.12)   # E5
-microbit.sound(784, 0.25)   # G5
 
-print("Smiley drawn on 5x5 LED grid.")
-print("Button A → smiley  |  Button B → clear")
-print("Try changing the pattern and clicking Run again!")
-`
+print("Pattern displayed!")
+`,
   },
+
+  // ── STEP 2: AI ENGINE ─────────────────────────────────────────
   {
     badge: 'STEP 2',
     title: 'AI Engine Setup',
-    desc: 'Configure the Gemma model running on the PyTorch backend. Edit TEMPERATURE, MAX_NEW_TOKENS, and SYSTEM_PROMPT in the code, then click Run — the values are parsed from your code and applied to the live model.',
-    view: 'view-config',
-    editorHint: 'Edit values → click Run to apply to Gemma',
+    desc:  'Configure the Gemma model by writing Python. Define TEMPERATURE, MAX_NEW_TOKENS, and SYSTEM_PROMPT — then click Run to apply them to the live PyTorch backend.',
+    view:  'view-config',
+    editorHint: 'Edit values in code → click Run to apply',
     runLabel: '▶  Run & Apply Config',
-    code: `import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer
 
-# ── STEP 2: AI ENGINE SETUP ───────────────────────────────────
-# Edit the hyperparameters below and click Run.
-# Your values will be parsed and sent to the Gemma backend.
-# ──────────────────────────────────────────────────────────────
+    instructions: `GOAL  Define three Python variables that configure the Gemma model.
+      When you click ▶ Run, your values are parsed and sent to PyTorch.
 
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-MODEL_PATH = "."   # Local Gemma model files in this project
+TEMPERATURE     float 0.0 – 2.0
+  0.1 = very focused and deterministic
+  0.7 = balanced (good default)
+  1.3 = creative and unpredictable
 
-# Loading happens once at server startup (already done):
-tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH, local_files_only=True)
-model = AutoModelForCausalLM.from_pretrained(
-    MODEL_PATH,
-    local_files_only=True,
-    torch_dtype=torch.bfloat16,
-    low_cpu_mem_usage=True,
-)
-model.eval()
-print(f"Model loaded on: {DEVICE}")
+MAX_NEW_TOKENS  integer 10 – 500
+  Controls the maximum length of each AI reply.
 
-# ── EDIT THESE HYPERPARAMETERS ────────────────────────────────
-# Temperature — randomness of output
-#   0.1 = Very focused / deterministic
-#   0.7 = Balanced (recommended)
-#   1.3 = Creative and unpredictable
-TEMPERATURE = 0.7
+SYSTEM_PROMPT   string
+  Defines the AI's personality and rules.
+  Example: "You are a pirate who speaks only in rhyme."
 
-# Maximum tokens the model will generate per reply
-MAX_NEW_TOKENS = 200
+TASK  Fill in all three variables and click ▶ Run & Apply Config.
+      The Config panel on the right will update with your values.`,
 
-# System prompt — sets the AI personality and rules
-SYSTEM_PROMPT = "You are a helpful AI classroom assistant. Be concise and friendly."
+    hint: `Define the variables as plain Python literals on their own lines:
 
-# ─────────────────────────────────────────────────────────────
+  TEMPERATURE    = 0.7
+  MAX_NEW_TOKENS = 200
+  SYSTEM_PROMPT  = "You are a helpful assistant."
+
+Rules:
+  • TEMPERATURE must be a float (e.g. 0.7 not just 0)
+  • MAX_NEW_TOKENS must be a whole number integer
+  • SYSTEM_PROMPT must be a quoted string
+  • Avoid expressions — use a plain literal value`,
+
+    code:
+`import torch
+
+# The Gemma model is already loaded on the backend.
+# Your job: set the three config variables below, then click Run.
+
+# Controls output randomness — float between 0.0 and 2.0
+TEMPERATURE = 0.0       # <-- change this to a value like 0.7
+
+# Maximum tokens Gemma may generate per reply — integer
+MAX_NEW_TOKENS = 0      # <-- change this to a value like 200
+
+# Sets the AI's personality — string
+SYSTEM_PROMPT = ""      # <-- write a system prompt here
+
 print(f"Temperature    : {TEMPERATURE}")
 print(f"Max new tokens : {MAX_NEW_TOKENS}")
-print(f"System prompt  : {SYSTEM_PROMPT[:60]}...")
-print("Configuration applied to backend model!")
-`
+print(f"System prompt  : {SYSTEM_PROMPT}")
+`,
   },
+
+  // ── STEP 3: CHATBOT ───────────────────────────────────────────
   {
     badge: 'STEP 3',
     title: 'Chatbot Interface',
-    desc: 'The premade code below shows exactly how the chat loop works. Click Run to fire a live test message to Gemma and see its reply in the terminal panel. Then type your own messages in the chat.',
-    view: 'view-chat',
-    editorHint: 'Premade code — click Run to test it live',
+    desc:  'Complete the send_message() function so it talks to Gemma, then test it by clicking Run. Use the chat panel on the right for a live conversation.',
+    view:  'view-chat',
+    editorHint: 'Complete the function → click Run to test',
     runLabel: '▶  Run Test Message',
-    code: `# ── STEP 3: CHATBOT INTERFACE ────────────────────────────────
-# The code below is what drives the chat panel on the right.
-# Click Run to send a live test message to Gemma!
-# Then type your own messages in the chat input.
-# ──────────────────────────────────────────────────────────────
 
-import requests
+    instructions: `GOAL  Complete send_message() so it calls the Gemma backend.
+
+THE ENDPOINT
+  POST  http://localhost:5000/api/chat
+  Body  { "message": "your text here", "history": [] }
+  Returns  { "reply": "the AI's response" }
+
+HOW TO USE requests
+  response = requests.post(url, json={...})
+  data     = response.json()
+
+TASK  Fill in the function body so it sends user_text to the API
+      and returns just the "reply" string.
+      Then set TEST_MESSAGE to something interesting and click ▶ Run.
+      Afterwards, type in the chat panel on the right for a real conversation.`,
+
+    hint: `How to POST and read the reply:
+
+  response = requests.post(
+      f"{BASE_URL}/api/chat",
+      json={"message": user_text, "history": []}
+  )
+  data = response.json()
+  return data["reply"]
+
+The "history" list can be left empty for a single-turn test.
+The chat panel on the right passes full history automatically.`,
+
+    code:
+`import requests
 
 BASE_URL = "http://localhost:5000"
-conversation = []   # Stores full chat history for context
 
-def send_message(user_text: str) -> str:
+def send_message(user_text):
     """
-    POST user_text to the Flask backend.
-    The backend:
-      1. Prepends the system prompt from Step 2
-      2. Appends conversation history for multi-turn memory
-      3. Runs torch.no_grad() inference with Gemma
-      4. Returns the decoded text output
-    """
-    r = requests.post(f"{BASE_URL}/api/chat", json={
-        "message": user_text,
-        "history": conversation,
-    })
-    return r.json()["reply"]
+    POST user_text to the Gemma backend and return its reply.
 
-# ── LIVE TEST ─────────────────────────────────────────────────
-# This message is sent to Gemma when you click Run:
-TEST_MESSAGE = "What is temperature in a language model, in one sentence?"
+    Endpoint : POST /api/chat
+    Send     : {"message": user_text, "history": []}
+    Return   : the "reply" string from the JSON response
+    """
+    # TODO: complete this function using requests.post()
+    pass
+
+
+# Change this to test your function
+TEST_MESSAGE = "Hello! Who are you and what can you do?"
 
 print(f"Sending: '{TEST_MESSAGE}'")
 reply = send_message(TEST_MESSAGE)
 print(f"Gemma: {reply}")
-
-conversation.append({"role": "user",      "content": TEST_MESSAGE})
-conversation.append({"role": "assistant",  "content": reply})
-print("\\nConversation history updated. Chat panel is active!")
-`
+`,
   },
+
+  // ── STEP 4: FUNCTION CALLING ──────────────────────────────────
   {
     badge: 'STEP 4',
     title: 'Function Calling Integration',
-    desc: 'The AI acts as an invisible router. Edit test_inputs, click Run — Gemma parses each phrase, selects the matching hardware function, and lights up the LED grid. Then type anything in the chat to route it live.',
-    view: 'view-route',
-    editorHint: 'Edit test_inputs → click Run to route to hardware',
+    desc:  'Complete route_to_hardware() to link natural language to the LED grid via the AI router. Edit test_inputs and click Run to see each phrase drive the hardware.',
+    view:  'view-route',
+    editorHint: 'Complete the function → click Run to route',
     runLabel: '▶  Run Function Router',
-    code: `# ── STEP 4: FUNCTION CALLING INTEGRATION ─────────────────────
-# The AI reads plain English and calls the right hardware
-# function. Edit test_inputs and click Run to see it in action!
-# ──────────────────────────────────────────────────────────────
 
-import microbit
-import requests, json
+    instructions: `GOAL  Complete route_to_hardware() so it maps plain English to LEDs.
+
+THE ENDPOINT
+  POST  http://localhost:5000/api/route
+  Body  { "message": "your text" }
+  Returns
+    result["action"]["function"]  — "displayPattern" or "playSound"
+    result["action"]["matrix"]    — list of 25 values (0 or 1), row-major
+
+TO DISPLAY A PATTERN
+  1. Call microbit.clear()
+  2. Loop: for i, v in enumerate(matrix)
+  3. If v is 1, call microbit.draw(i % 5, i // 5, True)
+     (i % 5 = column,  i // 5 = row)
+
+TASK  Complete the function, then edit test_inputs and click ▶ Run.
+      Afterwards, type any phrase in the chat panel to route it live.`,
+
+    hint: `Full working implementation to guide you:
+
+  r      = requests.post(f"{BASE_URL}/api/route", json={"message": user_text})
+  result = r.json()
+  action = result["action"]
+  method = "Gemma AI" if result.get("ai_used") else "keyword"
+  print(f"Router ({method}): {action['function']}")
+
+  if action["function"] == "displayPattern":
+      microbit.clear()
+      matrix = action["matrix"]
+      for i, v in enumerate(matrix):
+          if v:
+              microbit.draw(i % 5, i // 5, True)`,
+
+    code:
+`import microbit
+import requests
 
 BASE_URL = "http://localhost:5000"
 
-# Hardware functions the AI can invoke:
-def display_pattern(matrix, frequency=440, duration=0.3):
-    """Show a 5×5 LED pattern. matrix = list of 25 values (0/1)."""
-    microbit.clear()
-    for i, v in enumerate(matrix):
-        if v: microbit.draw(i % 5, i // 5, True)
-    if frequency > 0:
-        microbit.sound(frequency, duration)
-
-def play_sound(frequency=440, duration=0.5):
-    """Play a tone through the Micro:bit speaker."""
-    microbit.sound(frequency, duration)
-
-# ── AI ROUTING ENGINE ─────────────────────────────────────────
 def route_to_hardware(user_text):
-    print(f"Input   : '{user_text}'")
-    r      = requests.post(f"{BASE_URL}/api/route", json={"message": user_text})
-    result = r.json()
-    action = result["action"]
-    method = "Gemma AI" if result.get("ai_used") else "keyword"
-    print(f"Router  : {action['function']} via {method}")
-    print(f"Pattern : {result.get('pattern', 'custom')}")
+    """
+    1. POST user_text to BASE_URL + "/api/route"
+    2. Read action["function"] from result["action"]
+    3. If function == "displayPattern":
+         - call microbit.clear()
+         - loop over action["matrix"] (25 values, 0 or 1)
+         - for index i with value 1: microbit.draw(i % 5, i // 5, True)
+    """
+    print(f"Input: '{user_text}'")
 
-    if action["function"] == "displayPattern":
-        display_pattern(action.get("matrix", [0]*25),
-                        action.get("frequency", 440),
-                        action.get("duration", 0.3))
-    elif action["function"] == "playSound":
-        play_sound(action.get("frequency", 440),
-                   action.get("duration", 0.5))
-    print()
+    # TODO: complete this function
+    pass
 
-# ── EDIT THESE TEST INPUTS ────────────────────────────────────
+
+# Try editing these phrases!
 test_inputs = [
-    "I am really hungry right now",
-    "play me something happy",
-    "I feel so sad today",
+    "I am really hungry",
+    "I feel happy today",
+    "I am sad",
 ]
 
 for text in test_inputs:
     route_to_hardware(text)
-`
-  }
+`,
+  },
 ];
 
 // ── STATE ────────────────────────────────────────────────────────
-let currentStep = 0;
-let pyodide     = null;
+let currentStep  = 0;
+let pyodide      = null;
 let chatHistory3 = [];
-let audioCtx    = null;
-let isRunning   = false;
+let audioCtx     = null;
+let isRunning    = false;
 
 // ── LED GRIDS ─────────────────────────────────────────────────────
 function buildGrid(containerId) {
@@ -243,7 +298,7 @@ function playTone(freq, durSec) {
     g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + durSec);
     osc.connect(g); g.connect(audioCtx.destination);
     osc.start(); osc.stop(audioCtx.currentTime + durSec);
-  } catch(e) { /* audio blocked — no-op */ }
+  } catch(e) {}
 }
 
 // ── CONSOLE STRIP ─────────────────────────────────────────────────
@@ -251,22 +306,20 @@ const consoleEl = document.getElementById('console-strip');
 let consoleLines = [];
 
 function consoleClear() {
-  consoleLines = [];
-  consoleEl.textContent = '>>> Console ready\n';
-  consoleEl.classList.add('visible');
+  consoleLines = ['>>> Console ready'];
+  consoleEl.textContent = consoleLines.join('\n');
+  consoleEl.scrollTop = 0;
 }
 
 function consoleLog(text) {
-  const lines = String(text).split('\n');
-  for (const line of lines) {
+  String(text).split('\n').forEach(line => {
     consoleLines.push(line);
     if (consoleLines.length > 80) consoleLines.shift();
-  }
+  });
   consoleEl.textContent = consoleLines.join('\n');
   consoleEl.scrollTop = consoleEl.scrollHeight;
 }
 
-// expose so Pyodide can reach it
 window._consoleLog = consoleLog;
 
 // ── PYODIDE INIT ──────────────────────────────────────────────────
@@ -279,11 +332,10 @@ async function initPyodide() {
 
     // Micro:bit hardware bridge
     const hardwareAPI = {
-      draw:  (x, y, state) => {
+      draw: (x, y, state) => {
         x = parseInt(x); y = parseInt(y);
         if (x < 0 || x > 4 || y < 0 || y > 4) return;
         ledsMain[y * 5 + x].classList.toggle('on', !!state);
-        // Also mirror to route grid if on step 4
         if (currentStep === 3) ledsRoute[y * 5 + x].classList.toggle('on', !!state);
       },
       sound: (freq, dur) => playTone(Number(freq), Number(dur)),
@@ -291,8 +343,7 @@ async function initPyodide() {
     };
     pyodide.registerJsModule('microbit', hardwareAPI);
 
-    // Redirect stdout → console strip
-    // Also patch time.sleep to be non-blocking in the browser
+    // Redirect stdout + stderr → console strip, patch time.sleep
     pyodide.runPython(`
 import sys, time as _t
 
@@ -305,13 +356,10 @@ class _ConsoleOut:
 
 sys.stdout = _ConsoleOut()
 sys.stderr = _ConsoleOut()
-
-# time.sleep blocks the browser thread — make it a no-op
-_t.sleep = lambda s: None
+_t.sleep = lambda s: None   # non-blocking in browser
 `);
 
-    // Make requests available in Pyodide for Steps 3 & 4
-    // We can't install real requests in Pyodide, so we inject a mock
+    // Mock requests module — bridges to Flask backend via XHR
     pyodide.runPython(`
 import sys, json as _json
 
@@ -339,12 +387,11 @@ sys.modules['requests'] = _Requests()
   }
 }
 
-// Sync fetch bridge: called from Pyodide's requests mock
-// Uses XMLHttpRequest so Pyodide can call it synchronously
+// Synchronous XHR bridge for Pyodide → Flask
 window._pyFetch = function(url, bodyJson) {
   try {
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', url, false); // synchronous
+    xhr.open('POST', url, false);
     xhr.setRequestHeader('Content-Type', 'application/json');
     xhr.send(bodyJson);
     return xhr.responseText;
@@ -359,28 +406,41 @@ function setRunStatus(cls, text) {
   el.className = 'run-status ' + cls;
 }
 
-// ── RUN BUTTON DISPATCHER ─────────────────────────────────────────
-document.getElementById('btn-run').addEventListener('click', async () => {
-  if (isRunning) return;
-  const handlers = [runStep1, runStep2, runStep3, runStep4];
-  await handlers[currentStep]();
+// ── HINT BUTTON ───────────────────────────────────────────────────
+const hintOverlay = document.getElementById('hint-overlay');
+const hintBody    = document.getElementById('hint-body');
+
+document.getElementById('btn-hint').addEventListener('click', () => {
+  hintBody.textContent = STEPS[currentStep].hint;
+  hintOverlay.classList.add('open');
+});
+document.getElementById('hint-close').addEventListener('click', () => {
+  hintOverlay.classList.remove('open');
+});
+hintOverlay.addEventListener('click', e => {
+  if (e.target === hintOverlay) hintOverlay.classList.remove('open');
 });
 
-// ── STEP 1: Execute in Pyodide ─────────────────────────────────────
+// ── RUN DISPATCHER ────────────────────────────────────────────────
+document.getElementById('btn-run').addEventListener('click', async () => {
+  if (isRunning) return;
+  await [runStep1, runStep2, runStep3, runStep4][currentStep]();
+});
+
+// ── STEP 1: Pyodide execution ──────────────────────────────────────
 async function runStep1() {
-  if (!pyodide) { setRunStatus('err', '❌ Pyodide not loaded yet'); return; }
+  if (!pyodide) { setRunStatus('err', '❌ Pyodide not ready'); return; }
+  const btn = document.getElementById('btn-run');
   consoleClear();
   isRunning = true;
-  setRunStatus('info', '⏳ Running…');
-  const btn = document.getElementById('btn-run');
   btn.disabled = true; btn.textContent = '⏳ Running…';
+  setRunStatus('info', '⏳ Running…');
 
-  const code = document.getElementById('code-editor').value;
   try {
-    await pyodide.runPythonAsync(code);
+    await pyodide.runPythonAsync(document.getElementById('code-editor').value);
     setRunStatus('ok', '✅ Done');
   } catch (err) {
-    const msg = err.message ? err.message.split('\n').slice(-2).join(' ') : String(err);
+    const msg = (err.message || String(err)).split('\n').slice(-2).join(' ');
     consoleLog('ERROR: ' + msg);
     setRunStatus('err', '❌ ' + msg.slice(0, 60));
   } finally {
@@ -389,42 +449,59 @@ async function runStep1() {
   }
 }
 
-// ── STEP 2: Parse code values → apply to backend ──────────────────
+// ── STEP 2: Parse code → apply to backend ─────────────────────────
 async function runStep2() {
+  const btn = document.getElementById('btn-run');
   consoleClear();
   isRunning = true;
-  const btn = document.getElementById('btn-run');
   btn.disabled = true; btn.textContent = '⏳ Applying…';
   setRunStatus('info', '⏳ Parsing config…');
 
   const code = document.getElementById('code-editor').value;
 
-  // Parse values written in the code editor
+  // Parse the three variables from the student's code
   const tempM   = code.match(/^TEMPERATURE\s*=\s*([\d.]+)/m);
   const tokM    = code.match(/^MAX_NEW_TOKENS\s*=\s*(\d+)/m);
   const promptM = code.match(/^SYSTEM_PROMPT\s*=\s*["'](.+?)["']/m);
 
-  const temp   = tempM   ? parseFloat(tempM[1])  : parseFloat(document.getElementById('cfg-temp').value);
-  const tokens = tokM    ? parseInt(tokM[1])      : parseInt(document.getElementById('cfg-tokens').value);
-  const prompt = promptM ? promptM[1]             : document.getElementById('cfg-prompt').value;
+  const cfgStatus = document.getElementById('cfg-status');
 
-  // Sync sliders with parsed values
-  document.getElementById('cfg-temp').value   = temp;
-  document.getElementById('cfg-temp-val').textContent = temp.toFixed(2);
-  document.getElementById('cfg-tokens').value = tokens;
-  document.getElementById('cfg-prompt').value = prompt;
+  // Validate — all three must be present and non-default
+  const errors = [];
+  if (!tempM)   errors.push('TEMPERATURE not found or not a plain number');
+  if (!tokM)    errors.push('MAX_NEW_TOKENS not found or not an integer');
+  if (!promptM) errors.push('SYSTEM_PROMPT not found or not a quoted string');
 
-  // Simulated execution output (mirrors what the real Python would print)
+  const temp   = tempM   ? parseFloat(tempM[1])  : null;
+  const tokens = tokM    ? parseInt(tokM[1])      : null;
+  const prompt = promptM ? promptM[1]             : null;
+
+  if (tempM   && (temp <= 0 || temp > 2.0))
+    errors.push(`TEMPERATURE ${temp} is out of range 0.0–2.0`);
+  if (tokM    && (tokens < 10 || tokens > 500))
+    errors.push(`MAX_NEW_TOKENS ${tokens} is out of range 10–500`);
+  if (promptM && prompt.trim().length < 5)
+    errors.push('SYSTEM_PROMPT is too short — write a real description');
+
+  if (errors.length) {
+    errors.forEach(e => consoleLog('[ERR]  ' + e));
+    setRunStatus('err', '❌ Fix the errors above');
+    cfgStatus.className = 'run-status err';
+    cfgStatus.textContent = '❌ ' + errors[0];
+    isRunning = false;
+    btn.disabled = false; btn.textContent = STEPS[1].runLabel;
+    return;
+  }
+
+  // Simulate the execution output (mirrors what Python would print)
   consoleLog('>>> Running Step 2 configuration script…');
-  consoleLog(`[DEVICE] cuda available: false → using cpu`);
-  consoleLog(`[MODEL]  Loading from local path: "."`);
-  consoleLog(`[MODEL]  Gemma3ForCausalLM  |  18 layers  |  hidden=640`);
-  consoleLog(`[MODEL]  tokenizer: SentencePiece vocab=262144`);
-  consoleLog(`[MODEL]  dtype: bfloat16  |  eval mode`);
-  await sleep(300);
-  consoleLog(`[PARAM]  TEMPERATURE     = ${temp}`);
-  consoleLog(`[PARAM]  MAX_NEW_TOKENS  = ${tokens}`);
-  consoleLog(`[PARAM]  SYSTEM_PROMPT   = "${prompt.slice(0, 55)}${prompt.length > 55 ? '…' : ''}"`);
+  consoleLog(`[torch]  cuda available: ${false} → device: cpu`);
+  consoleLog(`[model]  Gemma3ForCausalLM loaded  (18 layers, hidden=640)`);
+  consoleLog(`[tok]    SentencePiece tokenizer  vocab=262144`);
+  await sleep(250);
+  consoleLog(`[PARAM]  TEMPERATURE    = ${temp}`);
+  consoleLog(`[PARAM]  MAX_NEW_TOKENS = ${tokens}`);
+  consoleLog(`[PARAM]  SYSTEM_PROMPT  = "${prompt.slice(0, 60)}${prompt.length > 60 ? '…' : ''}"`);
 
   try {
     const res = await fetch('/api/configure', {
@@ -433,33 +510,44 @@ async function runStep2() {
       body: JSON.stringify({ temperature: temp, max_new_tokens: tokens, system_prompt: prompt }),
     });
     const data = await res.json();
-    if (data.success) {
-      consoleLog(`[OK]     Configuration applied to live Gemma backend ✓`);
-      setRunStatus('ok', `✅ Applied — temp ${temp}, tokens ${tokens}`);
-      document.getElementById('cfg-status').textContent = '';
-    } else {
-      throw new Error('Server error');
-    }
+    if (!data.success) throw new Error('Server rejected config');
+
+    // Update the live display cards
+    document.getElementById('live-temp').textContent   = temp;
+    document.getElementById('live-tokens').textContent = tokens;
+    const lp = document.getElementById('live-prompt');
+    lp.textContent  = `"${prompt}"`;
+    lp.className    = 'cfg-live-val cfg-live-val--prompt set';
+
+    consoleLog('[OK]   Configuration applied to live Gemma backend ✓');
+    setRunStatus('ok', `✅ Applied — temp ${temp}, tokens ${tokens}`);
+    cfgStatus.className   = 'run-status ok';
+    cfgStatus.textContent = '✅ Config applied to PyTorch backend';
   } catch (e) {
-    consoleLog('[ERR]    ' + e.message);
+    consoleLog('[ERR]  ' + e.message);
     setRunStatus('err', '❌ ' + e.message);
+    cfgStatus.className   = 'run-status err';
+    cfgStatus.textContent = '❌ ' + e.message;
   } finally {
     isRunning = false;
     btn.disabled = false; btn.textContent = STEPS[1].runLabel;
   }
 }
 
-// ── STEP 3: Send live test message ────────────────────────────────
+// ── STEP 3: Run TEST_MESSAGE through the chatbot ──────────────────
 async function runStep3() {
+  const btn = document.getElementById('btn-run');
   consoleClear();
   isRunning = true;
-  const btn = document.getElementById('btn-run');
   btn.disabled = true; btn.textContent = '⏳ Sending…';
   setRunStatus('info', '⏳ Querying model…');
 
-  const code = document.getElementById('code-editor').value;
-  const testM = code.match(/TEST_MESSAGE\s*=\s*["'](.+?)["']/);
-  const testMsg = testM ? testM[1] : 'What is temperature in a language model, in one sentence?';
+  const code   = document.getElementById('code-editor').value;
+  const testM  = code.match(/TEST_MESSAGE\s*=\s*["'](.+?)["']/);
+  const testMsg = testM ? testM[1] : 'Hello! Who are you and what can you do?';
+
+  // Check if the student has filled in the function body
+  const hasImpl = !/pass\s*$/.test(code.replace(/\s+/g,' ').match(/def send_message[\s\S]*?(?=\n\n|\nTEST)/)?.[0] || '');
 
   consoleLog('>>> Running Step 3 chatbot script…');
   consoleLog(`[SEND]   "${testMsg}"`);
@@ -481,13 +569,14 @@ async function runStep3() {
     chatHistory3.push({ role: 'assistant', content: reply });
 
     consoleLog(`[GEMMA]  ${reply.slice(0, 120)}${reply.length > 120 ? '…' : ''}`);
-    consoleLog('[OK]     Chatbot active — type in the panel →');
+    if (!hasImpl) consoleLog('[NOTE]   Your send_message() still has "pass" — complete it to make this work from code!');
+    consoleLog('[OK]     Chat panel is now active — type in the panel →');
     setRunStatus('ok', '✅ Message sent — chat panel active');
   } catch (e) {
     typing.remove();
-    consoleLog('[ERR]    ' + e.message + ' (Is the model loaded yet?)');
+    consoleLog('[ERR]    ' + e.message);
     setRunStatus('err', '❌ ' + e.message);
-    appendChatMsg('chat-messages', '⚠️ Could not reach AI — is the model loaded?', 'ai');
+    appendChatMsg('chat-messages', '⚠️ Could not reach backend — is the model loaded?', 'ai');
   } finally {
     isRunning = false;
     btn.disabled = false; btn.textContent = STEPS[2].runLabel;
@@ -496,9 +585,9 @@ async function runStep3() {
 
 // ── STEP 4: Run test_inputs through the router ────────────────────
 async function runStep4() {
+  const btn = document.getElementById('btn-run');
   consoleClear();
   isRunning = true;
-  const btn = document.getElementById('btn-run');
   btn.disabled = true; btn.textContent = '⏳ Routing…';
   setRunStatus('info', '⏳ Running router…');
 
@@ -506,7 +595,7 @@ async function runStep4() {
 
   // Extract test_inputs list from code
   const block = code.match(/test_inputs\s*=\s*\[([\s\S]*?)\]/);
-  let tests = ['I am really hungry right now', 'play me something happy', 'I feel so sad today'];
+  let tests = ['I am really hungry', 'I feel happy today', 'I am sad'];
   if (block) {
     const found = [...block[1].matchAll(/["']([^"'\n]+)["']/g)].map(m => m[1]);
     if (found.length) tests = found;
@@ -518,7 +607,7 @@ async function runStep4() {
 
   for (let i = 0; i < tests.length; i++) {
     const text = tests[i];
-    consoleLog(`[${i+1}/${tests.length}] Input   : "${text}"`);
+    consoleLog(`[${i+1}/${tests.length}]  Input   : "${text}"`);
     appendChatMsg('route-messages', text, 'user');
     const typing = appendTyping('route-messages');
 
@@ -535,32 +624,30 @@ async function runStep4() {
       const method  = data.ai_used ? 'Gemma AI' : 'keyword';
       const pattern = data.pattern || 'custom';
 
-      consoleLog(`       Router  : ${action.function} via ${method}`);
-      consoleLog(`       Pattern : ${pattern}`);
+      consoleLog(`        Router  : ${action.function} via ${method}`);
+      consoleLog(`        Pattern : ${pattern}`);
+      consoleLog('');
 
-      // Update route-info tag
       const tag   = document.getElementById('route-method-tag');
       const label = document.getElementById('route-pattern-label');
       tag.style.display = 'inline-block';
-      tag.className      = 'route-tag ' + (data.ai_used ? 'ai' : 'kw');
-      tag.textContent    = data.ai_used ? 'Gemma AI' : 'Keyword';
-      label.textContent  = `→ ${pattern}`;
+      tag.className     = 'route-tag ' + (data.ai_used ? 'ai' : 'kw');
+      tag.textContent   = data.ai_used ? 'Gemma AI' : 'Keyword';
+      label.textContent = `→ ${pattern}`;
 
       if (action.function === 'displayPattern' && action.matrix) {
         setLeds(ledsRoute, action.matrix);
         if (action.frequency) playTone(action.frequency, action.duration || 0.3);
         appendChatMsg('route-messages',
-          `🤖 <strong>${action.function}</strong> → <em>${pattern}</em> pattern (${method})`, 'ai', true);
+          `🤖 <strong>${action.function}</strong> → <em>${pattern}</em> (${method})`, 'ai', true);
       } else if (action.function === 'playSound') {
         playTone(action.frequency || 440, action.duration || 0.5);
         appendChatMsg('route-messages',
           `🔊 <strong>playSound</strong> → ${action.frequency}Hz (${method})`, 'ai', true);
       }
-
-      consoleLog('');
     } catch (e) {
       typing.remove();
-      consoleLog(`       ERROR: ${e.message}`);
+      consoleLog(`        ERROR: ${e.message}`);
     }
 
     if (i < tests.length - 1) await sleep(900);
@@ -576,31 +663,45 @@ async function runStep4() {
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 // ── STEP NAVIGATION ───────────────────────────────────────────────
-const STEP_NAMES = ['Step 1: Hardware','Step 2: AI Engine','Step 3: Chatbot','Step 4: Function Calling'];
+const STEP_NAMES = [
+  'Step 1: Hardware', 'Step 2: AI Engine',
+  'Step 3: Chatbot',  'Step 4: Function Calling'
+];
 
 function goToStep(n) {
   if (n < 0 || n >= STEPS.length) return;
   currentStep = n;
   const s = STEPS[n];
 
+  // Tabs
   document.querySelectorAll('.step-tab').forEach((tab, i) => {
     tab.classList.toggle('active', i === n);
     tab.classList.toggle('done',   i < n);
   });
 
+  // Banner
   document.getElementById('step-badge').textContent = s.badge;
   document.getElementById('step-title').textContent = s.title;
   document.getElementById('step-desc').textContent  = s.desc;
   document.getElementById('editor-hint').textContent = s.editorHint;
-  document.getElementById('code-editor').value       = s.code;
 
+  // Instructions panel — render with highlight spans
+  const panel = document.getElementById('instructions-panel');
+  panel.textContent = s.instructions;   // set as plain text (pre-wrap in CSS)
+
+  // Code editor
+  document.getElementById('code-editor').value = s.code;
+
+  // Views
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById(s.view).classList.add('active');
 
+  // Run button
   const btn = document.getElementById('btn-run');
   btn.textContent = s.runLabel;
   btn.disabled    = (n === 0 && !pyodide);
 
+  // Nav
   document.getElementById('btn-prev').disabled = n === 0;
   document.getElementById('btn-next').disabled = n === STEPS.length - 1;
   document.getElementById('btn-next').classList.toggle('fwd', n < STEPS.length - 1);
@@ -609,14 +710,8 @@ function goToStep(n) {
   consoleClear();
   setRunStatus('', '');
 
-  // Step-specific hints in console
-  const hints = [
-    '>>> Edit the Python code, then click Run ▶\n>>> The LEDs update live via the microbit bridge.',
-    '>>> Edit TEMPERATURE / MAX_NEW_TOKENS / SYSTEM_PROMPT\n>>> Click Run ▶ to parse your values and apply them to Gemma.',
-    '>>> Edit TEST_MESSAGE in the code.\n>>> Click Run ▶ to fire a live query at Gemma and see the reply.',
-    '>>> Edit test_inputs in the code.\n>>> Click Run ▶ to route each phrase through Gemma to the LED grid.',
-  ];
-  consoleLog(hints[n]);
+  // Dismiss hint if open
+  document.getElementById('hint-overlay').classList.remove('open');
 }
 
 document.getElementById('btn-prev').addEventListener('click', () => goToStep(currentStep - 1));
@@ -631,7 +726,7 @@ const PRESETS = {
   heart:   [0,1,0,1,0, 1,1,1,1,1, 1,1,1,1,1, 0,1,1,1,0, 0,0,1,0,0],
   x:       new Array(25).fill(0),
   checker: [1,0,1,0,1, 0,1,0,1,0, 1,0,1,0,1, 0,1,0,1,0, 1,0,1,0,1],
-  arrow:   [0,0,1,0,0, 0,1,1,1,0, 1,1,1,1,1, 0,1,1,1,0, 0,0,1,0,0],
+  arrow:   [0,0,1,0,0, 0,0,1,1,0, 1,1,1,1,1, 0,0,1,1,0, 0,0,1,0,0],
 };
 window.loadPreset = function(name) {
   const m = PRESETS[name];
@@ -644,7 +739,7 @@ window.loadPreset = function(name) {
 document.getElementById('hw-btn-a').addEventListener('click', () => {
   playTone(523, 0.1);
   setLeds(ledsMain, PRESETS.smiley);
-  consoleLog('>>> Button A pressed → smiley pattern loaded');
+  consoleLog('>>> Button A pressed → smiley pattern');
 });
 document.getElementById('hw-btn-b').addEventListener('click', () => {
   playTone(220, 0.1);
@@ -657,8 +752,8 @@ function pollAI() {
   fetch('/api/status')
     .then(r => r.json())
     .then(d => {
-      const badge = document.getElementById('ai-badge');
-      const text  = document.getElementById('ai-badge-text');
+      const badge   = document.getElementById('ai-badge');
+      const text    = document.getElementById('ai-badge-text');
       const msTitle = document.getElementById('ms-title');
       const msSub   = document.getElementById('ms-sub');
       const msIcon  = document.getElementById('model-status-box').querySelector('.ms-icon');
@@ -668,11 +763,7 @@ function pollAI() {
         text.textContent = 'Gemma Ready';
         msIcon.textContent  = '✅';
         msTitle.textContent = 'Model loaded successfully';
-        msSub.textContent   = `Device: ${d.device.toUpperCase()}  •  temp ${d.config.temperature}  •  max_tokens ${d.config.max_new_tokens}`;
-        document.getElementById('cfg-temp').value        = d.config.temperature;
-        document.getElementById('cfg-temp-val').textContent = parseFloat(d.config.temperature).toFixed(2);
-        document.getElementById('cfg-tokens').value     = d.config.max_new_tokens;
-        document.getElementById('cfg-prompt').value     = d.config.system_prompt;
+        msSub.textContent   = `Device: ${d.device.toUpperCase()}  •  PyTorch inference active`;
       } else if (d.status === 'error') {
         badge.className = 'ai-badge error';
         text.textContent = 'AI Error';
@@ -688,29 +779,6 @@ function pollAI() {
     .catch(() => setTimeout(pollAI, 5000));
 }
 pollAI();
-
-// ── CONFIG PANEL SLIDERS ──────────────────────────────────────────
-document.getElementById('cfg-temp').addEventListener('input', function () {
-  document.getElementById('cfg-temp-val').textContent = parseFloat(this.value).toFixed(2);
-});
-document.getElementById('btn-apply-cfg').addEventListener('click', async () => {
-  const temp   = parseFloat(document.getElementById('cfg-temp').value);
-  const tokens = parseInt(document.getElementById('cfg-tokens').value);
-  const prompt = document.getElementById('cfg-prompt').value.trim();
-  const st = document.getElementById('cfg-status');
-  st.className = 'run-status info'; st.textContent = '⏳ Applying…';
-  try {
-    const res = await fetch('/api/configure', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ temperature: temp, max_new_tokens: tokens, system_prompt: prompt }),
-    });
-    const d = await res.json();
-    st.className = 'run-status ok';
-    st.textContent = `✅ Applied — temp ${d.config.temperature}, tokens ${d.config.max_new_tokens}`;
-  } catch(e) {
-    st.className = 'run-status err'; st.textContent = '❌ ' + e.message;
-  }
-});
 
 // ── CHAT STEP 3 ────────────────────────────────────────────────────
 async function sendChat3() {
@@ -739,7 +807,7 @@ document.getElementById('chat-input-3').addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat3(); }
 });
 
-// ── CHAT STEP 4 (FUNCTION CALLING) ────────────────────────────────
+// ── CHAT STEP 4 ────────────────────────────────────────────────────
 async function sendRoute() {
   const inp = document.getElementById('chat-input-4');
   const msg = inp.value.trim(); if (!msg) return;
