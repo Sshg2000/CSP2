@@ -2,9 +2,10 @@ import os
 import re
 import json
 import threading
+import traceback
 import torch
 from flask import Flask, request, jsonify, send_from_directory
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoModelForCausalLM, GenerationConfig
 
 app = Flask(__name__, static_folder='.')
 
@@ -51,7 +52,7 @@ def load_model():
         model = AutoModelForCausalLM.from_pretrained(
             MODEL_PATH,
             local_files_only=True,
-            torch_dtype=torch.bfloat16,
+            dtype=torch.bfloat16,
             low_cpu_mem_usage=True,
         )
         model.eval()
@@ -68,15 +69,34 @@ def load_model():
 threading.Thread(target=load_model, daemon=True).start()
 
 
-def _apply_template(messages):
+def _tokenize(messages):
+    """
+    Apply the chat template and return (input_ids tensor, n_prompt_tokens).
+    Handles both the old transformers return (plain tensor) and the new
+    transformers 5.x return (BatchEncoding dict with 'input_ids' key).
+    Falls back to merging the system prompt into the first user turn if the
+    tokenizer's template doesn't accept a system role.
+    """
     tokenizer = model_state['tokenizer']
-    try:
-        return tokenizer.apply_chat_template(
-            messages, tokenize=True, add_generation_prompt=True, return_tensors='pt'
+
+    def _run(msgs):
+        result = tokenizer.apply_chat_template(
+            msgs, tokenize=True, add_generation_prompt=True, return_tensors='pt'
         )
+        # transformers ≥5.x returns BatchEncoding; older versions return a tensor
+        if hasattr(result, 'input_ids'):
+            ids = result['input_ids']
+        elif isinstance(result, dict):
+            ids = result['input_ids']
+        else:
+            ids = result  # plain tensor (old API)
+        return ids
+
+    try:
+        ids = _run(messages)
     except Exception:
-        merged = []
-        prefix = ''
+        # Gemma3 chat template may reject a 'system' role — fold it into user turn
+        merged, prefix = [], ''
         for m in messages:
             if m['role'] == 'system':
                 prefix = m['content'] + '\n\n'
@@ -84,31 +104,36 @@ def _apply_template(messages):
                 merged.append(m)
         if merged and merged[0]['role'] == 'user':
             merged[0] = {'role': 'user', 'content': prefix + merged[0]['content']}
-        return tokenizer.apply_chat_template(
-            merged, tokenize=True, add_generation_prompt=True, return_tensors='pt'
-        )
+        ids = _run(merged)
+
+    return ids.to(DEVICE)
 
 
 def generate(messages, temperature=None, max_new_tokens=None):
     if model_state['status'] != 'ready':
         raise RuntimeError(f"Model not ready ({model_state['status']})")
 
-    model = model_state['model']
-    temp = temperature if temperature is not None else model_config['temperature']
-    max_tok = max_new_tokens if max_new_tokens is not None else model_config['max_new_tokens']
+    model     = model_state['model']
+    tokenizer = model_state['tokenizer']
+    temp      = temperature      if temperature      is not None else model_config['temperature']
+    max_tok   = max_new_tokens   if max_new_tokens   is not None else model_config['max_new_tokens']
 
-    inputs = _apply_template(messages).to(DEVICE)
+    input_ids = _tokenize(messages)          # shape [1, prompt_len]
+    prompt_len = input_ids.shape[1]
+
+    gen_kwargs = dict(
+        max_new_tokens=int(max_tok),
+        do_sample=(float(temp) > 0),
+        pad_token_id=tokenizer.eos_token_id,
+    )
+    if float(temp) > 0:
+        gen_kwargs['temperature'] = float(temp)
 
     with torch.no_grad():
-        outputs = model.generate(
-            inputs,
-            max_new_tokens=int(max_tok),
-            temperature=float(temp) if temp > 0 else None,
-            do_sample=(temp > 0),
-        )
+        outputs = model.generate(input_ids, **gen_kwargs)
 
-    new_tokens = outputs[0][inputs.shape[1]:]
-    return model_state['tokenizer'].decode(new_tokens, skip_special_tokens=True).strip()
+    new_tokens = outputs[0][prompt_len:]
+    return tokenizer.decode(new_tokens, skip_special_tokens=True).strip()
 
 
 def classify_input(text):
@@ -210,6 +235,7 @@ def api_chat():
         reply = generate(messages)
         return jsonify({'success': True, 'reply': reply})
     except Exception as e:
+        traceback.print_exc()
         return jsonify({'success': False, 'reply': f'Error: {e}'}), 500
 
 
