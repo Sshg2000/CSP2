@@ -44,17 +44,29 @@ Common note frequencies (Hz):
     code:
 `import microbit
 
+# ── YOUR CODE: Define your LED pattern ───────────────────────
+# Add (column, row) pairs — e.g. (2, 2) = centre LED
+# Columns and rows both run 0 (left/top) to 4 (right/bottom)
+
+my_pattern = [
+    # (x, y),   <-- add coordinates here
+
+]
+
+# ── YOUR CODE: Choose a note frequency in Hz ─────────────────
+# C4=262  E4=330  G4=392  A4=440  C5=523  (0 = silent)
+
+my_frequency = 0
+
+# ── PROVIDED: draws your pattern and plays your tone ─────────
 microbit.clear()
+for x, y in my_pattern:
+    microbit.draw(x, y, True)
 
-# TODO: Draw your own pattern using microbit.draw(x, y, True)
-#       x = column (0–4, left to right)
-#       y = row    (0–4, top to bottom)
+if my_frequency > 0:
+    microbit.sound(my_frequency, 0.3)
 
-
-# TODO: Play at least one tone using microbit.sound(frequency, seconds)
-
-
-print("Pattern displayed!")
+print(f"Drew {len(my_pattern)} LEDs at {my_frequency} Hz")
 `,
   },
 
@@ -67,23 +79,23 @@ print("Pattern displayed!")
     editorHint: 'Edit values in code → click Run to apply',
     runLabel: '▶  Run & Apply Config',
 
-    instructions: `GOAL  Define three Python variables that configure the Gemma model.
-      When you click ▶ Run, your values are parsed and sent to PyTorch.
+    instructions: `GOAL  Set three PyTorch model config variables, then click ▶ Run.
+      Everything else (model loading, inference loop) is provided.
 
-TEMPERATURE     float 0.0 – 2.0
-  0.1 = very focused and deterministic
-  0.7 = balanced (good default)
-  1.3 = creative and unpredictable
+YOUR THREE TASKS
 
-MAX_NEW_TOKENS  integer 10 – 500
-  Controls the maximum length of each AI reply.
+  TEMPERATURE     float 0.0 – 2.0
+    Controls how random/creative the model's output is.
+    0.1 = very focused    0.7 = balanced    1.3 = creative
 
-SYSTEM_PROMPT   string
-  Defines the AI's personality and rules.
-  Example: "You are a pirate who speaks only in rhyme."
+  MAX_NEW_TOKENS  integer 10 – 500
+    The maximum number of tokens Gemma generates per reply.
 
-TASK  Fill in all three variables and click ▶ Run & Apply Config.
-      The Config panel on the right will update with your values.`,
+  SYSTEM_PROMPT   string
+    A sentence describing the AI's personality and rules.
+    This is prepended to every conversation as a hidden instruction.
+
+TASK  Replace the placeholder values and click ▶ Run & Apply Config.`,
 
     hint: `Define the variables as plain Python literals on their own lines:
 
@@ -100,21 +112,29 @@ Rules:
     code:
 `import torch
 
-# The Gemma model is already loaded on the backend.
-# Your job: set the three config variables below, then click Run.
+# ── PROVIDED: The backend already loaded Gemma like this ─────
+# model = AutoModelForCausalLM.from_pretrained(".",
+#             dtype=torch.bfloat16, low_cpu_mem_usage=True)
+# tokenizer = AutoTokenizer.from_pretrained(".")
+# model.eval()
 
-# Controls output randomness — float between 0.0 and 2.0
-TEMPERATURE = 0.0       # <-- change this to a value like 0.7
+# ── YOUR CODE: Set these three generation parameters ─────────
 
-# Maximum tokens Gemma may generate per reply — integer
-MAX_NEW_TOKENS = 0      # <-- change this to a value like 200
+# How random/creative should the output be?  (float 0.0 – 2.0)
+TEMPERATURE = 0.0       # <-- replace with e.g. 0.7
 
-# Sets the AI's personality — string
-SYSTEM_PROMPT = ""      # <-- write a system prompt here
+# How many tokens can Gemma generate per reply?  (int 10 – 500)
+MAX_NEW_TOKENS = 0      # <-- replace with e.g. 200
 
-print(f"Temperature    : {TEMPERATURE}")
-print(f"Max new tokens : {MAX_NEW_TOKENS}")
-print(f"System prompt  : {SYSTEM_PROMPT}")
+# What personality/rules should the model follow?  (string)
+SYSTEM_PROMPT = ""      # <-- write your own prompt here
+
+# ── PROVIDED: Validates and sends your values to PyTorch ─────
+print(f"[torch] dtype         : bfloat16")
+print(f"[torch] device        : cpu")
+print(f"[param] temperature   : {TEMPERATURE}")
+print(f"[param] max_new_tokens: {MAX_NEW_TOKENS}")
+print(f"[param] system_prompt : {SYSTEM_PROMPT}")
 `,
   },
 
@@ -127,57 +147,53 @@ print(f"System prompt  : {SYSTEM_PROMPT}")
     editorHint: 'Complete the function → click Run to test',
     runLabel: '▶  Run Test Message',
 
-    instructions: `GOAL  Complete send_message() so it calls the Gemma backend.
+    instructions: `GOAL  Write just two lines inside send_message() to connect your
+      code to the Gemma model running on the backend.
+      Everything else — imports, function signature, test run — is provided.
 
-THE ENDPOINT
-  POST  http://localhost:5000/api/chat
-  Body  { "message": "your text here", "history": [] }
-  Returns  { "reply": "the AI's response" }
+YOUR TWO TASKS (inside send_message)
 
-HOW TO USE requests
-  response = requests.post(url, json={...})
-  data     = response.json()
+  Line 1 — make the POST request:
+    response = requests.post(url, json={"message": ..., "history": ...})
 
-TASK  Fill in the function body so it sends user_text to the API
-      and returns just the "reply" string.
-      Then set TEST_MESSAGE to something interesting and click ▶ Run.
-      Afterwards, type in the chat panel on the right for a real conversation.`,
+  Line 2 — return just the reply text:
+    return response.json()["reply"]
 
-    hint: `How to POST and read the reply:
+TASK  Fill in the two lines, then click ▶ Run to fire a live test message.
+      Afterwards, use the chat panel on the right to have a conversation.`,
+
+    hint: `The two lines you need to write:
 
   response = requests.post(
       f"{BASE_URL}/api/chat",
       json={"message": user_text, "history": []}
   )
-  data = response.json()
-  return data["reply"]
+  return response.json()["reply"]
 
-The "history" list can be left empty for a single-turn test.
-The chat panel on the right passes full history automatically.`,
+The history list keeps multi-turn context — leave it empty [] for now.`,
 
     code:
 `import requests
 
+# ── PROVIDED: backend address ────────────────────────────────
 BASE_URL = "http://localhost:5000"
 
+# ── PROVIDED: function signature and test runner ─────────────
 def send_message(user_text):
-    """
-    POST user_text to the Gemma backend and return its reply.
+    # ── YOUR CODE: two lines only ─────────────────────────────
+    # Line 1: POST to f"{BASE_URL}/api/chat"
+    #         with json={"message": user_text, "history": []}
+    # Line 2: return response.json()["reply"]
 
-    Endpoint : POST /api/chat
-    Send     : {"message": user_text, "history": []}
-    Return   : the "reply" string from the JSON response
-    """
-    # TODO: complete this function using requests.post()
-    pass
+    response = None  # <-- replace with requests.post(...)
+    return None      # <-- replace with the reply string
 
-
-# Change this to test your function
-TEST_MESSAGE = "Hello! Who are you and what can you do?"
+# ── PROVIDED: sends a test and prints the result ─────────────
+TEST_MESSAGE = "In one sentence, what is PyTorch?"
 
 print(f"Sending: '{TEST_MESSAGE}'")
 reply = send_message(TEST_MESSAGE)
-print(f"Gemma: {reply}")
+print(f"Gemma : {reply}")
 `,
   },
 
@@ -190,67 +206,68 @@ print(f"Gemma: {reply}")
     editorHint: 'Complete the function → click Run to route',
     runLabel: '▶  Run Function Router',
 
-    instructions: `GOAL  Complete route_to_hardware() so it maps plain English to LEDs.
+    instructions: `GOAL  Write three lines to render an AI-chosen LED pattern on the grid.
+      The API call, response parsing, and test loop are all provided.
 
-THE ENDPOINT
-  POST  http://localhost:5000/api/route
-  Body  { "message": "your text" }
-  Returns
-    result["action"]["function"]  — "displayPattern" or "playSound"
-    result["action"]["matrix"]    — list of 25 values (0 or 1), row-major
+THE matrix VARIABLE (provided for you)
+  A list of 25 values — one per LED, in row-major order.
+  Value 1 = LED on,  0 = LED off.
 
-TO DISPLAY A PATTERN
-  1. Call microbit.clear()
-  2. Loop: for i, v in enumerate(matrix)
-  3. If v is 1, call microbit.draw(i % 5, i // 5, True)
-     (i % 5 = column,  i // 5 = row)
+  Index → position:   column = i % 5    row = i // 5
 
-TASK  Complete the function, then edit test_inputs and click ▶ Run.
-      Afterwards, type any phrase in the chat panel to route it live.`,
+YOUR THREE TASKS (inside the "if displayPattern" block)
 
-    hint: `Full working implementation to guide you:
+  Line 1: microbit.clear()
+  Line 2: for i, v in enumerate(matrix):
+  Line 3:     if v: microbit.draw(i % 5, i // 5, True)
 
-  r      = requests.post(f"{BASE_URL}/api/route", json={"message": user_text})
-  result = r.json()
-  action = result["action"]
-  method = "Gemma AI" if result.get("ai_used") else "keyword"
-  print(f"Router ({method}): {action['function']}")
+ALSO: Edit test_inputs to use your own phrases.
+TASK  Add the three lines and click ▶ Run Function Router.`,
 
-  if action["function"] == "displayPattern":
-      microbit.clear()
-      matrix = action["matrix"]
-      for i, v in enumerate(matrix):
-          if v:
-              microbit.draw(i % 5, i // 5, True)`,
+    hint: `The three lines that render the LED pattern:
+
+  microbit.clear()
+  for i, v in enumerate(matrix):
+      if v:
+          microbit.draw(i % 5, i // 5, True)
+
+i % 5  gives the column (0–4, left to right)
+i // 5 gives the row    (0–4, top to bottom)`,
 
     code:
-`import microbit
-import requests
+`import microbit, requests
 
+# ── PROVIDED: backend address ────────────────────────────────
 BASE_URL = "http://localhost:5000"
 
 def route_to_hardware(user_text):
-    """
-    1. POST user_text to BASE_URL + "/api/route"
-    2. Read action["function"] from result["action"]
-    3. If function == "displayPattern":
-         - call microbit.clear()
-         - loop over action["matrix"] (25 values, 0 or 1)
-         - for index i with value 1: microbit.draw(i % 5, i // 5, True)
-    """
-    print(f"Input: '{user_text}'")
+    # ── PROVIDED: calls the AI router and gets back an action ──
+    result = requests.post(
+        f"{BASE_URL}/api/route", json={"message": user_text}
+    ).json()
+    action = result["action"]
+    method = "Gemma AI" if result.get("ai_used") else "keyword"
+    print(f"Input  : '{user_text}'")
+    print(f"Router : {action['function']} via {method}")
 
-    # TODO: complete this function
-    pass
+    if action["function"] == "displayPattern":
+        matrix = action["matrix"]   # 25 values, 0 or 1
 
+        # ── YOUR CODE: three lines to light up the LEDs ────────
+        # Line 1: clear the display
+        # Line 2: loop — for i, v in enumerate(matrix):
+        # Line 3:     if v: draw the LED at column i%5, row i//5
 
-# Try editing these phrases!
+        pass  # <-- remove this and write your three lines
+
+# ── YOUR CODE: edit these phrases to try different patterns ──
 test_inputs = [
-    "I am really hungry",
+    "I am really hungry",    # <-- change these
     "I feel happy today",
     "I am sad",
 ]
 
+# ── PROVIDED: runs each phrase through the router ────────────
 for text in test_inputs:
     route_to_hardware(text)
 `,
