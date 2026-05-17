@@ -181,6 +181,33 @@ Pattern category rules:
 Respond ONLY with a JSON object. No prose, no code fences, just JSON."""
 
 
+@app.route('/api/forward', methods=['POST'])
+def api_forward():
+    data   = request.json or {}
+    prompt = data.get('prompt', 'The BBC Micro:bit is')
+    if model_state['status'] != 'ready':
+        return jsonify({'success': False, 'error': f"Model not ready ({model_state['status']})"}), 503
+    try:
+        tokenizer = model_state['tokenizer']
+        model     = model_state['model']
+        input_ids = tokenizer(prompt, return_tensors='pt').input_ids.to(DEVICE)
+        with torch.no_grad():
+            outputs = model(input_ids)          # nn.Module.__call__ → forward()
+        logits        = outputs.logits          # [batch, seq_len, vocab_size]
+        next_token_id = int(logits[0, -1, :].argmax())
+        next_token    = tokenizer.decode(next_token_id)
+        return jsonify({
+            'success':       True,
+            'prompt':        prompt,
+            'prompt_tokens': int(input_ids.shape[1]),
+            'logits_shape':  list(logits.shape),
+            'next_token':    next_token,
+        })
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/')
 def index():
     return send_from_directory('.', 'index.html')

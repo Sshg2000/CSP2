@@ -79,23 +79,31 @@ print(f"Drew {len(my_pattern)} LEDs at {my_frequency} Hz")
     editorHint: 'Edit values in code → click Run to apply',
     runLabel: '▶  Run & Apply Config',
 
-    instructions: `GOAL  Set three PyTorch model config variables, then click ▶ Run.
-      Everything else (model loading, inference loop) is provided.
+    instructions: `GOAL  Set three generation parameters, then invoke the model's
+      forward pass with model(input_ids) — the core PyTorch __call__.
 
-YOUR THREE TASKS
+TASKS 1–3: Generation parameters
 
   TEMPERATURE     float 0.0 – 2.0
-    Controls how random/creative the model's output is.
-    0.1 = very focused    0.7 = balanced    1.3 = creative
+    Scales the logit distribution before sampling.
+    0.1 = deterministic (greedy)   0.7 = balanced   1.3 = creative
 
   MAX_NEW_TOKENS  integer 10 – 500
-    The maximum number of tokens Gemma generates per reply.
+    Hard cut-off on tokens generated per reply (one token = one forward pass).
 
   SYSTEM_PROMPT   string
-    A sentence describing the AI's personality and rules.
-    This is prepended to every conversation as a hidden instruction.
+    Injected as the system role before every conversation via apply_chat_template().
 
-TASK  Replace the placeholder values and click ▶ Run & Apply Config.`,
+TASK 4: Call the model — model(input_ids)
+  Every PyTorch nn.Module is callable.  Calling model(input_ids) triggers
+  nn.Module.__call__, which runs model.forward(input_ids) and returns a
+  CausalLMOutput object:
+    outputs.logits  →  tensor [batch, seq_len, vocab_size]
+  The last position in seq_len holds the prediction for the NEXT token.
+  argmax() picks the highest-probability token from the vocab (262 144 tokens).
+
+TASK  Fill in all four sections and click ▶ Run & Apply Config.
+      The console will show the real logits shape from the live model.`,
 
     hint: `Define the variables as plain Python literals on their own lines:
 
@@ -112,29 +120,37 @@ Rules:
     code:
 `import torch
 
-# ── PROVIDED: The backend already loaded Gemma like this ─────
-# model = AutoModelForCausalLM.from_pretrained(".",
-#             dtype=torch.bfloat16, low_cpu_mem_usage=True)
+# ── PROVIDED: backend loaded Gemma like this ──────────────────
+# model     = AutoModelForCausalLM.from_pretrained(".", dtype=torch.bfloat16)
 # tokenizer = AutoTokenizer.from_pretrained(".")
-# model.eval()
+# model.eval()   # disables dropout → deterministic inference
 
-# ── YOUR CODE: Set these three generation parameters ─────────
+# ── TASKS 1–3: Set the three generation parameters ────────────
 
-# How random/creative should the output be?  (float 0.0 – 2.0)
-TEMPERATURE = 0.0       # <-- replace with e.g. 0.7
+TEMPERATURE    = 0.0   # <-- float 0.0–2.0   (e.g. 0.7)
+MAX_NEW_TOKENS = 0     # <-- integer 10–500   (e.g. 200)
+SYSTEM_PROMPT  = ""    # <-- your prompt string
 
-# How many tokens can Gemma generate per reply?  (int 10 – 500)
-MAX_NEW_TOKENS = 0      # <-- replace with e.g. 200
+# ── TASK 4: Call the model — the PyTorch __call__ ─────────────
+# Every nn.Module is callable.  model(input_ids) triggers
+# nn.Module.__call__ → model.forward(input_ids)
+# and returns CausalLMOutput with a .logits tensor.
+#
+# PROVIDED: tokenise a prompt into token IDs
+# input_ids = tokenizer("The Micro:bit is", return_tensors="pt").input_ids
+#
+# YOUR LINE: invoke the forward pass — what goes in the brackets?
+# with torch.no_grad():
+#     outputs = model( ??? )
+#
+# PROVIDED: read the top prediction from the logit distribution
+# next_token_id = outputs.logits[0, -1, :].argmax()
+# print(tokenizer.decode(next_token_id))
 
-# What personality/rules should the model follow?  (string)
-SYSTEM_PROMPT = ""      # <-- write your own prompt here
-
-# ── PROVIDED: Validates and sends your values to PyTorch ─────
-print(f"[torch] dtype         : bfloat16")
-print(f"[torch] device        : cpu")
-print(f"[param] temperature   : {TEMPERATURE}")
-print(f"[param] max_new_tokens: {MAX_NEW_TOKENS}")
-print(f"[param] system_prompt : {SYSTEM_PROMPT}")
+# ── PROVIDED: click Run to apply config and see Task 4 live ──
+print(f"temperature    = {TEMPERATURE}")
+print(f"max_new_tokens = {MAX_NEW_TOKENS}")
+print(f"system_prompt  = {SYSTEM_PROMPT}")
 `,
   },
 
@@ -537,6 +553,25 @@ async function runStep2() {
     lp.className    = 'cfg-live-val cfg-live-val--prompt set';
 
     consoleLog('[OK]   Configuration applied to live Gemma backend ✓');
+
+    // ── Task 4: run the real model(input_ids) __call__ ──────────
+    consoleLog('');
+    consoleLog('[TASK 4]  Invoking model(input_ids) — nn.Module.__call__…');
+    const fwRes  = await fetch('/api/forward', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: 'The BBC Micro:bit is' }),
+    });
+    const fwData = await fwRes.json();
+    if (fwData.success) {
+      consoleLog(`[torch]   input_ids.shape      = [1, ${fwData.prompt_tokens}]`);
+      consoleLog(`[torch]   outputs.logits.shape = [${fwData.logits_shape.join(', ')}]`);
+      consoleLog(`[torch]   logits[0,-1,:].argmax() → token "${fwData.next_token}"`);
+      consoleLog('[OK]      model(input_ids) succeeded — forward pass complete ✓');
+    } else {
+      consoleLog('[WARN]    Forward pass skipped — model not ready yet');
+    }
+
     setRunStatus('ok', `✅ Applied — temp ${temp}, tokens ${tokens}`);
     cfgStatus.className   = 'run-status ok';
     cfgStatus.textContent = '✅ Config applied to PyTorch backend';
